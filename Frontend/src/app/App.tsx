@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LandingPage } from '@/app/components/LandingPage';
-import { Login } from '@/app/components/Login';
+import { AuthPage } from '@/app/components/AuthPage';
+import { LoginPage } from '@/app/components/LoginPage';
 import { ForgotPassword } from '@/app/components/ForgotPassword';
 import { Overview } from '@/app/components/Overview';
 import { Dashboard } from '@/app/components/Dashboard';
@@ -23,6 +24,7 @@ import { Recycle, LayoutDashboard, Truck, Package, User, LogOut, Menu, Bell, Use
 import { Badge } from '@/app/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/app/components/ui/sheet';
 import { Toaster } from '@/app/components/ui/sonner';
+import { ToastContainer } from '@/hooks/useToast';
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
@@ -31,9 +33,11 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   const handleGetStarted = () => {
     setShowLanding(false);
+    setShowLogin(false);
   };
 
   const handleBackToHome = () => {
@@ -41,6 +45,15 @@ export default function App() {
     setIsLoggedIn(false);
     setUserRole('');
     setCurrentPage('overview');
+    setShowLogin(false);
+  };
+
+  const handleShowLogin = () => {
+    setShowLogin(true);
+  };
+
+  const handleShowSignup = () => {
+    setShowLogin(false);
   };
 
   const handleLogin = (role: string) => {
@@ -153,7 +166,10 @@ export default function App() {
   }
 
   if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} onBackToHome={handleBackToHome} onForgotPassword={handleForgotPassword} />;
+    if (showLogin) {
+      return <LoginPage onLogin={handleLogin} onBackToHome={handleBackToHome} onShowSignup={handleShowSignup} />;
+    }
+    return <AuthPage onLogin={handleLogin} onBackToHome={handleBackToHome} onShowLogin={handleShowLogin} />;
   }
 
   const Sidebar = () => (
@@ -270,6 +286,7 @@ export default function App() {
         </main>
       </div>
       <Toaster />
+      <ToastContainer />
     </div>
   );
 }

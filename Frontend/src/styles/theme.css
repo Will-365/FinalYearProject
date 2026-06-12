@@ -1,6 +1,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --gc-green: #16a34a;
+  --gc-green-rgb: 22, 163, 74;
+  --gc-green-light: #4ade80;
+  --gc-green-light-rgb: 74, 222, 128;
+  --gc-dark: #0d1f13;
   --font-size: 16px;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);

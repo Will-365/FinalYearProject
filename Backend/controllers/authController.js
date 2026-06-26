@@ -170,14 +170,172 @@ export const login = async (req, res, next) => {
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        location: user.location,
-      },
+      user: formatUserResponse(user),
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const formatUserResponse = (user) => ({
+  id: user._id,
+  fullName: user.fullName,
+  email: user.email,
+  phone: user.phone,
+  role: user.role,
+  location: user.location,
+  points: user.points,
+  totalPointsEarned: user.totalPointsEarned,
+  totalWasteScans: user.totalWasteScans,
+  totalCollections: user.totalCollections,
+  totalPickups: user.totalPickups,
+  collectorZone: user.collectorZone,
+  collectorStatus: user.collectorStatus,
+  vehicleType: user.vehicleType,
+  notificationPrefs: user.notificationPrefs,
+  createdAt: user.createdAt,
+});
+
+export const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.status(200).json({ success: true, data: formatUserResponse(user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const { fullName, phone, location, notificationPrefs, vehicleType } = req.body;
+
+    if (fullName?.trim()) user.fullName = fullName.trim();
+    if (phone?.trim()) user.phone = phone.trim();
+    if (location) user.location = { ...user.location?.toObject?.() || user.location || {}, ...location };
+    if (notificationPrefs) user.notificationPrefs = { ...user.notificationPrefs?.toObject?.() || user.notificationPrefs || {}, ...notificationPrefs };
+    if (vehicleType && user.role === 'collector') user.vehicleType = vehicleType;
+
+    await user.save();
+    res.status(200).json({ success: true, message: 'Profile updated', data: formatUserResponse(user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Current and new password are required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    user.password = newPassword;
+    await user.save();
+    res.status(200).json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: email?.toLowerCase()?.trim() });
+    if (!user) {
+      return res.status(200).json({ success: true, message: 'If that email exists, a reset code has been sent.' });
+    }
+
+    const otp = generateOTP();
+    const salt = await bcrypt.genSalt(10);
+    user.resetOtp = await bcrypt.hash(otp, salt);
+    user.resetOtpExpiry = Date.now() + 10 * 60 * 1000;
+    user.resetOtpAttempts = 0;
+    await user.save();
+
+    try {
+      await sendOTPEmail(user.email, user.fullName, otp);
+    } catch (err) {
+      console.error('Reset OTP email failed:', err);
+      return res.status(500).json({ success: false, message: 'Failed to send reset code email' });
+    }
+
+    res.status(200).json({ success: true, message: 'Reset code sent to your email.', email: user.email });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyResetOTP = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email: email?.toLowerCase()?.trim() });
+    if (!user || !user.resetOtp) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
+    }
+
+    if (user.resetOtpAttempts >= 5) {
+      return res.status(429).json({ success: false, message: 'Too many attempts. Request a new code.' });
+    }
+
+    if (!user.resetOtpExpiry || user.resetOtpExpiry < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Reset code has expired' });
+    }
+
+    const isMatch = await bcrypt.compare(otp, user.resetOtp);
+    if (!isMatch) {
+      user.resetOtpAttempts += 1;
+      await user.save();
+      return res.status(400).json({ success: false, message: 'Invalid reset code' });
+    }
+
+    res.status(200).json({ success: true, message: 'Code verified. You may set a new password.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const user = await User.findOne({ email: email?.toLowerCase()?.trim() });
+    if (!user || !user.resetOtp) {
+      return res.status(400).json({ success: false, message: 'Invalid reset request' });
+    }
+
+    if (!user.resetOtpExpiry || user.resetOtpExpiry < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Reset code has expired' });
+    }
+
+    const isMatch = await bcrypt.compare(otp, user.resetOtp);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Invalid reset code' });
+    }
+
+    user.password = newPassword;
+    user.resetOtp = null;
+    user.resetOtpExpiry = null;
+    user.resetOtpAttempts = 0;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password reset successfully. You can now log in.' });
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,12 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { body } from 'express-validator';
-import { register, verifyOTP, resendOTP, login } from '../controllers/authController.js';
+import {
+  register, verifyOTP, resendOTP, login,
+  getMe, updateProfile, changePassword,
+  forgotPassword, verifyResetOTP, resetPassword,
+} from '../controllers/authController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -54,5 +59,13 @@ router.post('/register', registerLimiter, validateRegister, register);
 router.post('/verify-otp', verifyOTP);
 router.post('/resend-otp', resendOTP);
 router.post('/login', loginLimiter, validateLogin, login);
+
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-otp', verifyResetOTP);
+router.post('/reset-password', resetPassword);
+
+router.get('/me', protect, getMe);
+router.put('/profile', protect, updateProfile);
+router.patch('/password', protect, changePassword);
 
 export default router;

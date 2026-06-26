@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['resident', 'collector', 'business'],
+      enum: ['resident', 'collector', 'business', 'admin'],
       default: 'resident',
     },
     isVerified: {
@@ -53,6 +53,23 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    resetOtp: {
+      type: String,
+      default: null,
+    },
+    resetOtpExpiry: {
+      type: Date,
+      default: null,
+    },
+    resetOtpAttempts: {
+      type: Number,
+      default: 0,
+    },
+    notificationPrefs: {
+      collections: { type: Boolean, default: true },
+      rewards: { type: Boolean, default: true },
+      news: { type: Boolean, default: false },
+    },
     location: {
       province: String,
       district: String,
@@ -60,6 +77,46 @@ const userSchema = new mongoose.Schema(
       cell: String,
       village: String,
       street: String,
+    },
+    points: {
+      type: Number,
+      default: 0,
+    },
+    totalPointsEarned: {
+      type: Number,
+      default: 0,
+    },
+    totalWasteScans: {
+      type: Number,
+      default: 0,
+    },
+    totalCollections: {
+      type: Number,
+      default: 0,
+    },
+    // Collector-specific fields
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    collectorZone: {
+      province: String,
+      district: String,
+      sector: String,
+    },
+    vehicleType: {
+      type: String,
+      enum: ['truck', 'van', 'motorcycle', 'bicycle', 'on_foot'],
+      default: 'motorcycle',
+    },
+    collectorStatus: {
+      type: String,
+      enum: ['available', 'on_route', 'offline'],
+      default: 'available',
+    },
+    totalPickups: {
+      type: Number,
+      default: 0,
     },
     createdAt: {
       type: Date,
@@ -85,3 +142,4 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 const User = mongoose.model('User', userSchema);
 export default User;
+// NOTE: User model already supports role='admin' — add it to enum

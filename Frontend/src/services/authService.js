@@ -1,8 +1,24 @@
-const BASE = import.meta.env?.VITE_API_URL || 'http://localhost:5000/api';
+import api, { extractData } from './api';
 
 export const authService = {
-  register: (data) => fetch(`${BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  verifyOTP: (data) => fetch(`${BASE}/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  resendOTP: (data) => fetch(`${BASE}/auth/resend-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  login: (data) => fetch(`${BASE}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
+  register: (data) =>
+    api.post('/auth/register', data).then((r) => r.data),
+
+  verifyOTP: (data) =>
+    api.post('/auth/verify-otp', data).then((r) => r.data),
+
+  resendOTP: (data) =>
+    api.post('/auth/resend-otp', data).then((r) => r.data),
+
+  login: (data) =>
+    api.post('/auth/login', data).then((r) => r.data),
+
+  forgotPassword: (email) =>
+    api.post('/auth/forgot-password', { email }).then((r) => r.data),
+
+  verifyResetOTP: (data) =>
+    api.post('/auth/verify-reset-otp', data).then((r) => r.data),
+
+  resetPassword: (data) =>
+    api.post('/auth/reset-password', data).then((r) => r.data),
 };

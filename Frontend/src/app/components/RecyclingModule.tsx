@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/app/components/ui/label';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { AdminRecyclingManagement } from '@/app/components/AdminRecyclingManagement';
+import { WasteIntakeTab } from '@/app/components/admin/WasteIntakeTab';
 
 interface RecyclingModuleProps {
   userRole?: string;
@@ -81,9 +81,8 @@ const wasteCategories = [
 ];
 
 export function RecyclingModule({ userRole }: RecyclingModuleProps) {
-  // If admin, show admin view
   if (userRole === 'admin') {
-    return <AdminRecyclingManagement />;
+    return <WasteIntakeTab />;
   }
 
   // Otherwise, show resident view

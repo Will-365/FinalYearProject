@@ -5,6 +5,7 @@ import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Recycle, ArrowLeft, Mail, Lock, CheckCircle2, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { authService } from '@/services/authService';
 
 interface ForgotPasswordProps {
   onBackToLogin: () => void;
@@ -18,63 +19,66 @@ export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSendOTP = (e: React.FormEvent) => {
+  const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      toast.success('OTP sent to your email!');
+    try {
+      const res = await authService.forgotPassword(email);
+      toast.success(res.message || 'Reset code sent!');
       setStep(2);
-    }, 1500);
+    } catch (err: unknown) {
+      toast.error((err as { message?: string })?.message || 'Failed to send reset code');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerifyOTP = (e: React.FormEvent) => {
+  const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Simulate OTP verification
-    setTimeout(() => {
+    try {
+      await authService.verifyResetOTP({ email, otp });
+      toast.success('Code verified!');
+      setStep(3);
+    } catch (err: unknown) {
+      toast.error((err as { message?: string })?.message || 'Invalid code');
+    } finally {
       setLoading(false);
-      if (otp === '123456' || otp.length === 6) {
-        toast.success('OTP verified successfully!');
-        setStep(3);
-      } else {
-        toast.error('Invalid OTP. Please try again.');
-      }
-    }, 1000);
+    }
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (newPassword.length < 8) {
       toast.error('Password must be at least 8 characters long');
       return;
     }
-
     if (newPassword !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
-
     setLoading(true);
-
-    // Simulate password reset
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await authService.resetPassword({ email, otp, newPassword });
       toast.success('Password reset successfully!');
       setStep(4);
-    }, 1500);
+    } catch (err: unknown) {
+      toast.error((err as { message?: string })?.message || 'Reset failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResendOTP = () => {
+  const handleResendOTP = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await authService.forgotPassword(email);
+      toast.success(res.message || 'New code sent!');
+    } catch (err: unknown) {
+      toast.error((err as { message?: string })?.message || 'Failed to resend');
+    } finally {
       setLoading(false);
-      toast.success('New OTP sent to your email!');
-    }, 1500);
+    }
   };
 
   return (

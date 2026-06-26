@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LandingPage } from '@/app/components/LandingPage';
 import { AuthPage } from '@/app/components/AuthPage';
 import { LoginPage } from '@/app/components/LoginPage';
@@ -6,6 +6,7 @@ import { ForgotPassword } from '@/app/components/ForgotPassword';
 import { Overview } from '@/app/components/Overview';
 import { Dashboard } from '@/app/components/Dashboard';
 import { AdminDashboard } from '@/app/components/AdminDashboard';
+import { AdminCollectionManagement } from '@/app/components/AdminCollectionManagement';
 import { CollectionManagement } from '@/app/components/CollectionManagement';
 import { AdminCollectorManagement } from '@/app/components/AdminCollectorManagement';
 import { AdminZoneManagement } from '@/app/components/AdminZoneManagement';
@@ -20,20 +21,67 @@ import { IncentiveReward } from '@/app/components/IncentiveReward';
 import { NotificationHub } from '@/app/components/NotificationHub';
 import { Reports } from '@/app/components/Reports';
 import { Button } from '@/app/components/ui/button';
-import { Recycle, LayoutDashboard, Truck, Package, User, LogOut, Menu, Bell, Users, TrendingUp, Link2, Home, Shield, Smartphone, Gift, UserCheck, MapPin, FileText } from 'lucide-react';
-import { Badge } from '@/app/components/ui/badge';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/app/components/ui/sheet';
+import {
+  Recycle, LayoutDashboard, Truck, Package, User, LogOut,
+  Users, TrendingUp, Link2, Home, Shield, Smartphone, Gift, UserCheck,
+  MapPin, FileText, ScanLine, ClipboardList, CalendarDays, Trophy, Ticket, Bell,
+  Leaf, ShoppingBag, Recycle as RecycleIcon,
+} from 'lucide-react';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/app/components/ui/sheet';
 import { Toaster } from '@/app/components/ui/sonner';
 import { ToastContainer } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { AppNavbar } from '@/components/layout/Navbar';
+import { ScanPage } from '@/pages/scan/ScanPage';
+import { CollectionRequestPage } from '@/pages/collection/CollectionRequestPage';
+import { MyRequestsPage } from '@/pages/collection/MyRequestsPage';
+import { SchedulesPage } from '@/pages/collection/SchedulesPage';
+import { CouponsPage } from '@/pages/coupons/CouponsPage';
+import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage';
+import { ResidentDashboard } from '@/pages/dashboard/ResidentDashboard';
+import { ResidentOverview } from '@/pages/dashboard/ResidentOverview';
+import { CollectorTasksPage } from '@/pages/collector/CollectorTasksPage';
+import { CollectorReportsPage } from '@/pages/collector/CollectorReportsPage';
+import { CollectorMessagesPage } from '@/pages/collector/CollectorMessagesPage';
+import { CollectorProfilePage } from '@/pages/profile/CollectorProfilePage';
+import { UserProfilePage } from '@/pages/profile/UserProfilePage';
+import { ResidentRecyclingPage } from '@/pages/recycling/ResidentRecyclingPage';
+import { ProductsPage } from '@/pages/products/ProductsPage';
+import { EnvironmentalImpactPage } from '@/pages/reports/EnvironmentalImpactPage';
+import { AdminReportsPage } from '@/pages/reports/AdminReportsPage';
+import { AdminProductManagement } from '@/app/components/AdminProductManagement';
+import { AdminMessagesPage } from '@/pages/messaging/AdminMessagesPage';
+import { ResidentNotificationsPage } from '@/pages/messaging/ResidentNotificationsPage';
+import { AuthProvider } from '@/context/AuthContext';
+import { CartProvider } from '@/context/CartContext';
 
-export default function App() {
+function AppContent() {
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const userRole = user?.role || '';
+
   const [showLanding, setShowLanding] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState('');
   const [currentPage, setCurrentPage] = useState('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const wasAuthenticated = useRef(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      wasAuthenticated.current = true;
+      setShowLanding(false);
+      if (user?.role === 'admin' && currentPage === 'overview') {
+        setCurrentPage('dashboard');
+      }
+      if (user?.role === 'collector' && currentPage === 'overview') {
+        setCurrentPage('dashboard');
+      }
+    } else if (wasAuthenticated.current && !isLoading) {
+      setShowLogin(true);
+      wasAuthenticated.current = false;
+    }
+  }, [isAuthenticated, isLoading, user?.role, currentPage]);
 
   const handleGetStarted = () => {
     setShowLanding(false);
@@ -42,48 +90,30 @@ export default function App() {
 
   const handleBackToHome = () => {
     setShowLanding(true);
-    setIsLoggedIn(false);
-    setUserRole('');
+    logout();
     setCurrentPage('overview');
     setShowLogin(false);
   };
 
-  const handleShowLogin = () => {
-    setShowLogin(true);
-  };
-
-  const handleShowSignup = () => {
-    setShowLogin(false);
-  };
-
-  const handleLogin = (role: string) => {
-    setUserRole(role);
-    setIsLoggedIn(true);
-    setCurrentPage('overview');
-  };
+  const handleShowLogin = () => setShowLogin(true);
+  const handleShowSignup = () => setShowLogin(false);
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserRole('');
+    logout();
     setCurrentPage('overview');
     setShowLanding(true);
   };
 
-  const handleForgotPassword = () => {
-    setShowForgotPassword(true);
-  };
+  const handleNavigate = (page: string) => setCurrentPage(page);
 
-  const handleBackToLogin = () => {
-    setShowForgotPassword(false);
-  };
-
-  const menuItems = [
+  const adminMenuItems = [
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'collection', label: 'Collections', icon: Truck },
     { id: 'collectors', label: 'Collectors', icon: UserCheck },
     { id: 'zones', label: 'Zones & Routes', icon: MapPin },
     { id: 'recycling', label: 'Recycling', icon: Package },
+    { id: 'products-admin', label: 'Eco Products', icon: ShoppingBag },
     { id: 'community', label: 'Community', icon: Users },
     { id: 'circular', label: 'Circular Economy', icon: TrendingUp },
     { id: 'analytics', label: 'Analytics', icon: Link2 },
@@ -95,81 +125,178 @@ export default function App() {
     { id: 'reports', label: 'Reports', icon: FileText },
   ];
 
-  // Collector-specific menu items
+  const residentMenuItems = [
+    { id: 'overview', label: 'Overview', icon: Home },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'scan', label: 'Waste Scanner', icon: ScanLine },
+    { id: 'collection-request', label: 'Request Pickup', icon: Truck },
+    { id: 'my-requests', label: 'My Requests', icon: ClipboardList },
+    { id: 'schedules', label: 'Schedules', icon: CalendarDays },
+    { id: 'recycling', label: 'Recycling Centers', icon: RecycleIcon },
+    { id: 'products', label: 'Eco Shop', icon: ShoppingBag },
+    { id: 'coupons', label: 'Coupons', icon: Ticket },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+    { id: 'environment', label: 'My Impact', icon: Leaf },
+    { id: 'notifications', label: 'Messages', icon: Bell },
+    { id: 'profile', label: 'Profile', icon: User },
+  ];
+
   const collectorMenuItems = [
     { id: 'dashboard', label: 'My Tasks', icon: LayoutDashboard },
-    { id: 'collection', label: 'Schedule', icon: Truck },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'notifications', label: 'Messages', icon: Bell },
   ];
 
-  // Get menu items based on role
   const getMenuItems = () => {
-    if (userRole === 'collector') {
-      return collectorMenuItems;
-    }
-    if (userRole === 'resident') {
-      // Exclude admin-only items for residents
-      return menuItems.filter(item =>
-        !['collectors', 'zones', 'audit', 'mobile'].includes(item.id)
-      );
-    }
-    // Admin gets all items
-    return menuItems;
+    if (userRole === 'collector') return collectorMenuItems;
+    if (userRole === 'resident') return residentMenuItems;
+    return adminMenuItems;
   };
 
   const renderPage = () => {
     switch (currentPage) {
       case 'overview':
-        return <Overview onNavigate={setCurrentPage} />;
+        return userRole === 'resident'
+          ? <ResidentOverview onNavigate={setCurrentPage} />
+          : <Overview onNavigate={setCurrentPage} />;
       case 'dashboard':
-        // Show different dashboard based on user role
-        return userRole === 'admin' ? <AdminDashboard /> : <Dashboard userRole={userRole} />;
+        if (userRole === 'admin') return <AdminDashboard onNavigate={setCurrentPage} />;
+        if (userRole === 'resident') return <ResidentDashboard onNavigate={handleNavigate} />;
+        if (userRole === 'collector') return <CollectorTasksPage />;
+        return <Dashboard userRole={userRole} />;
+      case 'scan':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <ScanPage onNavigate={handleNavigate} />
+          </ProtectedRoute>
+        );
+      case 'collection-request':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <CollectionRequestPage onNavigate={handleNavigate} />
+          </ProtectedRoute>
+        );
+      case 'my-requests':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <MyRequestsPage onNavigate={handleNavigate} />
+          </ProtectedRoute>
+        );
+      case 'schedules':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <SchedulesPage onNavigate={handleNavigate} />
+          </ProtectedRoute>
+        );
+      case 'coupons':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <CouponsPage />
+          </ProtectedRoute>
+        );
+      case 'leaderboard':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <LeaderboardPage />
+          </ProtectedRoute>
+        );
       case 'collection':
+        if (userRole === 'admin') return <AdminCollectionManagement />;
+        if (userRole === 'collector') {
+          return (
+            <ProtectedRoute allowedRoles={['collector']}>
+              <SchedulesPage onNavigate={handleNavigate} />
+            </ProtectedRoute>
+          );
+        }
         return <CollectionManagement userRole={userRole} />;
       case 'collectors':
         return <AdminCollectorManagement />;
       case 'zones':
         return <AdminZoneManagement />;
+      case 'products-admin':
+        return <AdminProductManagement onNavigate={handleNavigate} />;
       case 'recycling':
-        return <RecyclingModule userRole={userRole} />;
+        if (userRole === 'admin') return <RecyclingModule userRole={userRole} />;
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <ResidentRecyclingPage />
+          </ProtectedRoute>
+        );
+      case 'products':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <ProductsPage />
+          </ProtectedRoute>
+        );
+      case 'environment':
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <EnvironmentalImpactPage />
+          </ProtectedRoute>
+        );
+      case 'recycling-admin':
+        return <RecyclingModule userRole="admin" />;
       case 'profile':
-        return <UserProfile userRole={userRole} />;
+        if (userRole === 'collector') return <CollectorProfilePage />;
+        return <UserProfilePage userRole={userRole} />;
       case 'community':
         return <CommunityEngagement />;
-      case 'circular':
-        return <CircularEconomy />;
       case 'analytics':
-        return <AnalyticsReporting />;
+        return <AdminReportsPage />;
+      case 'circular':
+        if (userRole === 'resident') return <ProductsPage />;
+        return <AdminReportsPage />;
       case 'audit':
         return <AuditCompliance />;
       case 'mobile':
+        if (userRole === 'collector') return <CollectorTasksPage />;
         return <MobileCollectorApp />;
       case 'incentive':
         return <IncentiveReward userRole={userRole} />;
       case 'notifications':
+        if (userRole === 'collector') return <CollectorMessagesPage />;
+        if (userRole === 'admin') return <AdminMessagesPage />;
+        if (userRole === 'resident') return <ResidentNotificationsPage />;
         return <NotificationHub userRole={userRole} />;
       case 'reports':
+        if (userRole === 'collector') return <CollectorReportsPage />;
+        if (userRole === 'admin') return <AdminReportsPage />;
+        if (userRole === 'resident') return <EnvironmentalImpactPage />;
         return <Reports userRole={userRole} />;
       default:
         return <Overview onNavigate={setCurrentPage} />;
     }
   };
 
-  if (showLanding) {
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-green-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (showLanding && !isAuthenticated) {
     return <LandingPage onGetStarted={handleGetStarted} />;
   }
 
-  if (showForgotPassword) {
-    return <ForgotPassword onBackToLogin={handleBackToLogin} />;
+  if (showForgotPassword && !isAuthenticated) {
+    return <ForgotPassword onBackToLogin={() => setShowForgotPassword(false)} />;
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     if (showLogin) {
-      return <LoginPage onLogin={handleLogin} onBackToHome={handleBackToHome} onShowSignup={handleShowSignup} />;
+      return <LoginPage onBackToHome={handleBackToHome} onShowSignup={handleShowSignup} />;
     }
-    return <AuthPage onLogin={handleLogin} onBackToHome={handleBackToHome} onShowLogin={handleShowLogin} />;
+    return (
+      <AuthPage
+        onLogin={() => {}}
+        onBackToHome={handleBackToHome}
+        onShowLogin={handleShowLogin}
+      />
+    );
   }
 
   const Sidebar = () => (
@@ -189,7 +316,8 @@ export default function App() {
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
           <div className="text-sm text-gray-600 mb-1">Logged in as</div>
-          <div className="font-medium capitalize">{userRole}</div>
+          <div className="font-medium capitalize">{user?.fullName || userRole}</div>
+          <div className="text-xs text-gray-500 capitalize">{userRole}</div>
         </div>
 
         <nav className="space-y-1">
@@ -217,11 +345,7 @@ export default function App() {
       </div>
 
       <div className="p-4 border-t">
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          className="w-full justify-start"
-        >
+        <Button onClick={handleLogout} variant="outline" className="w-full justify-start">
           <LogOut className="h-5 w-5 mr-3" />
           Logout
         </Button>
@@ -231,62 +355,39 @@ export default function App() {
 
   return (
     <div className="h-screen flex bg-gray-50">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64 bg-white border-r">
+      <aside className="hidden lg:block w-64 bg-white border-r shrink-0">
         <Sidebar />
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white border-b px-4 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* Mobile Menu Toggle */}
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="lg:hidden">
-                    <Menu className="h-6 w-6" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-64">
-                  <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Access all platform features and settings
-                  </SheetDescription>
-                  <Sidebar />
-                </SheetContent>
-              </Sheet>
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <div className="lg:hidden">
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetContent side="left" className="p-0 w-64">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+              <SheetDescription className="sr-only">Access all platform features</SheetDescription>
+              <Sidebar />
+            </SheetContent>
+          </Sheet>
+        </div>
 
-              {/* Mobile Logo */}
-              <div className="flex items-center gap-2 lg:hidden">
-                <div className="bg-green-600 p-2 rounded-lg">
-                  <Recycle className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-bold">Green Care</h1>
-                </div>
-              </div>
-            </div>
+        <AppNavbar onMenuOpen={() => setMobileMenuOpen(true)} onLogout={handleLogout} />
 
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-xs">
-                  3
-                </Badge>
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        {/* Page Content */}
         <main className="flex-1 overflow-auto p-4 lg:p-8">
           {renderPage()}
         </main>
       </div>
-      <Toaster />
+      <Toaster position="bottom-right" richColors closeButton duration={4000} />
       <ToastContainer />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
+    </AuthProvider>
   );
 }

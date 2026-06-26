@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Recycle, Check, Eye, EyeOff, ChevronLeft, AlertTriangle } from 'lucide-react';
+import { Recycle, Check, Eye, EyeOff, ChevronLeft, AlertTriangle, Shield } from 'lucide-react';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 
 interface LoginPageProps {
-  onLogin: (role: string) => void;
   onBackToHome?: () => void;
   onShowSignup?: () => void;
 }
@@ -15,7 +15,7 @@ const trustBullets = [
   'Real-time pickup tracking across Kigali'
 ];
 
-export function LoginPage({ onLogin, onBackToHome, onShowSignup }: LoginPageProps) {
+export function LoginPage({ onBackToHome, onShowSignup }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +34,9 @@ export function LoginPage({ onLogin, onBackToHome, onShowSignup }: LoginPageProp
   const [shakeOtp, setShakeOtp] = useState(false);
   const otpInputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
+  const { login: authLogin, adminLogin } = useAuth();
   const { showToast } = useToast();
+  const [adminMode, setAdminMode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,24 +51,21 @@ export function LoginPage({ onLogin, onBackToHome, onShowSignup }: LoginPageProp
     setNeedsVerification(false);
     
     try {
-      const res = await authService.login({ email, password });
-      
-      if (res.success) {
-        localStorage.setItem('gc_token', res.token);
-        localStorage.setItem('gc_user', JSON.stringify(res.user));
-        showToast({ type: 'success', title: 'Welcome back!', message: `Welcome back, ${res.user.fullName}!` });
-        onLogin(res.user.role);
+      if (adminMode) {
+        await adminLogin(email, password);
+        showToast({ type: 'success', title: 'Welcome, Admin', message: 'Admin portal access granted' });
       } else {
-        if (res.needsVerification) {
-          setNeedsVerification(true);
-        } else {
-          setApiError(res.message);
-          setShakeCard(true);
-          setTimeout(() => setShakeCard(false), 400);
-        }
+        const res = await authLogin(email, password);
+        showToast({ type: 'success', title: 'Welcome back!', message: `Welcome back, ${res.fullName}!` });
       }
-    } catch (err) {
-      setApiError('An error occurred during login. Please try again.');
+    } catch (err: any) {
+      if (err.needsVerification) {
+        setNeedsVerification(true);
+      } else {
+        setApiError(err.message || 'Login failed');
+        setShakeCard(true);
+        setTimeout(() => setShakeCard(false), 400);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -251,8 +250,18 @@ export function LoginPage({ onLogin, onBackToHome, onShowSignup }: LoginPageProp
 
           {!showOtp ? (
             <div style={{ animation: 'fadeIn 0.2s ease' }}>
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0d1f13', marginBottom: 8 }}>Welcome back</h2>
-              <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: 32 }}>Sign in to your GreenCare account</p>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0d1f13', marginBottom: 8 }}>
+                {adminMode ? 'Admin Portal' : 'Welcome back'}
+              </h2>
+              <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: adminMode ? 16 : 32 }}>
+                {adminMode ? 'Sign in with your administrator credentials' : 'Sign in to your GreenCare account'}
+              </p>
+              {adminMode && (
+                <div style={{ background: '#0f172a', borderRadius: 10, padding: '12px 16px', marginBottom: 24, display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <Shield style={{ color: '#4ade80', width: 22, height: 22, flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)' }}>Restricted access — operations & compliance staff only</span>
+                </div>
+              )}
 
               {apiError && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start', animation: 'fadeIn 0.2s' }}>
@@ -323,9 +332,20 @@ export function LoginPage({ onLogin, onBackToHome, onShowSignup }: LoginPageProp
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'opacity 0.2s ease' }}>
                   {isLoading && <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)',
                     borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />}
-                  {isLoading ? 'Signing in...' : 'Sign In'}
+                  {isLoading ? 'Signing in...' : adminMode ? 'Sign In as Admin' : 'Sign In'}
                 </button>
               </form>
+
+              <div style={{ textAlign: 'center', marginTop: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => { setAdminMode(!adminMode); setApiError(null); setNeedsVerification(false); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: adminMode ? '#6b7280' : '#0f172a', fontWeight: 600, background: adminMode ? 'none' : '#f1f5f9', border: 'none', cursor: 'pointer', padding: adminMode ? 0 : '8px 14px', borderRadius: 8 }}
+                >
+                  {!adminMode && <Shield style={{ width: 16, height: 16 }} />}
+                  {adminMode ? '← Back to resident login' : 'Admin Portal'}
+                </button>
+              </div>
 
               <div style={{ textAlign: 'center', marginTop: 24, fontSize: '0.85rem', color: '#6b7280' }}>
                 Don&apos;t have an account?{' '}

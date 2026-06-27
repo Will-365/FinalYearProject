@@ -64,13 +64,24 @@ const analyzeImageWithGemini = async (base64Image, mimeType) => {
     throw new Error('No response from Gemini API');
   }
 
-  // Strip markdown code blocks if Gemini wraps it
-  const cleaned = rawText.replace(/```json|```/g, '').trim();
+  let cleaned = rawText.trim();
+  
+  // Extract JSON block from potential conversational wrapper or markdown
+  const jsonStart = cleaned.match(/[\{\[]/);
+  if (jsonStart) {
+    const startIndex = jsonStart.index;
+    const endChar = cleaned[startIndex] === '{' ? '}' : ']';
+    const endIndex = cleaned.lastIndexOf(endChar);
+    if (endIndex > startIndex) {
+      cleaned = cleaned.substring(startIndex, endIndex + 1);
+    }
+  }
 
   try {
     return { parsed: JSON.parse(cleaned), raw: rawText };
-  } catch {
-    throw new Error('Failed to parse Gemini response as JSON');
+  } catch (err) {
+    console.error('Failed JSON parse. Cleaned Text:', cleaned, '\nRaw Text:', rawText);
+    throw new Error(`Failed to parse Gemini response as JSON: ${err.message}`);
   }
 };
 

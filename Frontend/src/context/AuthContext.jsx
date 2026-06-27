@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   clearAuthStorage,
@@ -9,6 +9,7 @@ import {
 } from '@/services/api';
 import { authService } from '@/services/authService';
 import { adminAuthService } from '@/services/adminService';
+import { buyerService } from '@/services/buyerService';
 
 export const AuthContext = createContext(null);
 
@@ -17,6 +18,7 @@ export function AuthProvider({ children, onSessionExpired }) {
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [collectionPrefill, setCollectionPrefill] = useState(null);
+  const pointsPollRef = useRef(null);
 
   useEffect(() => {
     const storedToken = getStoredToken();
@@ -33,6 +35,10 @@ export function AuthProvider({ children, onSessionExpired }) {
     setToken(null);
     setUser(null);
     setCollectionPrefill(null);
+    if (pointsPollRef.current) {
+      clearInterval(pointsPollRef.current);
+      pointsPollRef.current = null;
+    }
   }, []);
 
   useEffect(() => {
@@ -43,6 +49,35 @@ export function AuthProvider({ children, onSessionExpired }) {
     });
     return () => setUnauthorizedHandler(null);
   }, [logout, onSessionExpired]);
+
+  // Poll points balance every 60 seconds for residents
+  useEffect(() => {
+    if (!token || !user || user.role !== 'resident') {
+      if (pointsPollRef.current) {
+        clearInterval(pointsPollRef.current);
+        pointsPollRef.current = null;
+      }
+      return;
+    }
+    const pollPoints = async () => {
+      try {
+        const res = await import('@/services/leaderboardService').then(m => m.leaderboardService.getMyStats());
+        const pts = res?.points ?? res?.data?.points;
+        if (pts != null) {
+          setUser(prev => {
+            if (!prev) return prev;
+            const next = { ...prev, points: pts };
+            if (token) persistAuth(token, next);
+            return next;
+          });
+        }
+      } catch { /* ignore poll errors */ }
+    };
+    pointsPollRef.current = setInterval(pollPoints, 60000);
+    return () => {
+      if (pointsPollRef.current) clearInterval(pointsPollRef.current);
+    };
+  }, [token, user?.role]);
 
   const login = useCallback(async (email, password) => {
     const res = await authService.login({ email, password });
@@ -66,6 +101,18 @@ export function AuthProvider({ children, onSessionExpired }) {
     return res.user;
   }, []);
 
+  const buyerLogin = useCallback(async (phone, password) => {
+    const res = await buyerService.login({ phone, password });
+    if (!res.success) {
+      throw { message: res.message || 'Invalid credentials' };
+    }
+    const buyerUser = { ...res.buyer, role: 'buyer' };
+    persistAuth(res.token, buyerUser);
+    setToken(res.token);
+    setUser(buyerUser);
+    return buyerUser;
+  }, []);
+
   const updateUser = useCallback((updates) => {
     setUser((prev) => {
       if (!prev) return prev;
@@ -87,6 +134,7 @@ export function AuthProvider({ children, onSessionExpired }) {
       isLoading,
       login,
       adminLogin,
+      buyerLogin,
       logout,
       updateUser,
       updatePoints,
@@ -94,7 +142,7 @@ export function AuthProvider({ children, onSessionExpired }) {
       setCollectionPrefill,
       points: user?.points ?? 0,
     }),
-    [user, token, isLoading, login, adminLogin, logout, updateUser, updatePoints, collectionPrefill]
+    [user, token, isLoading, login, adminLogin, buyerLogin, logout, updateUser, updatePoints, collectionPrefill]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

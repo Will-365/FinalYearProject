@@ -8,10 +8,12 @@ import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Progress } from '@/app/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
 import {
   MapPin, Phone, Package, Clock, PlayCircle, CheckCircle2, Loader2,
-  Truck, CheckCircle, Navigation, Inbox, RefreshCw,
+  Truck, CheckCircle, Navigation, Inbox, RefreshCw, AlertTriangle
 } from 'lucide-react';
+import { Textarea } from '@/app/components/ui/textarea';
 
 const TAB_META = {
   assigned: { label: 'Active Pickups', empty: 'No active pickups — admin will assign tasks to you' },
@@ -47,6 +49,11 @@ export function CollectorTasksPage() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState(null);
 
+  // Discrepancy Reporting State
+  const [discrepancyModal, setDiscrepancyModal] = useState({ open: false, pickup: null, step: 1 });
+  const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
+  const [discrepancyData, setDiscrepancyData] = useState({ actualWasteType: '', actualQuantity: '', actualWeightKg: '', notes: '' });
+
   const scopeMap = { assigned: 'assigned', requested: 'requested', history: 'history' };
 
   const load = useCallback(async (silent = false) => {
@@ -81,10 +88,50 @@ export function CollectorTasksPage() {
     setActionId(id);
     try {
       const res = await collectorService.updatePickupStatus(id, { status });
-      success(res.message || (status === 'completed' ? 'Pickup confirmed!' : 'Pickup started'));
+      success(res.message || 'Pickup started');
       load(true);
     } catch (err) {
       error(err.message);
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleCompletePickupClick = (pickup) => {
+    setDiscrepancyModal({ open: true, pickup, step: 1 });
+    setHasDiscrepancy(false);
+    setDiscrepancyData({ actualWasteType: pickup.wasteType, actualQuantity: pickup.quantity, actualWeightKg: '', notes: '' });
+  };
+
+  const submitCompletion = async () => {
+    const id = discrepancyModal.pickup?._id || discrepancyModal.pickup?.id;
+    if (!id) return;
+    
+    setActionId(id);
+    setDiscrepancyModal({ open: false, pickup: null, step: 1 });
+    
+    try {
+      const payload = { 
+        status: 'completed',
+        hasDiscrepancy 
+      };
+
+      if (hasDiscrepancy) {
+        payload.discrepancyDetails = {
+          actualWasteType: discrepancyData.actualWasteType,
+          actualQuantity: discrepancyData.actualQuantity,
+          notes: discrepancyData.notes
+        };
+      }
+      
+      // We pass the weight as well, which will create the intake record in backend
+      payload.actualWeightKg = Number(discrepancyData.actualWeightKg) || 0;
+
+      await collectorService.updatePickupStatus(id, payload);
+      success(hasDiscrepancy ? 'Pickup completed with discrepancy report.' : 'Pickup completed successfully!');
+      load(true);
+    } catch (err) {
+      error(err.message || 'Failed to complete pickup');
     } finally {
       setActionId(null);
     }
@@ -199,7 +246,7 @@ export function CollectorTasksPage() {
                           </Button>
                         )}
                         {p.status === 'in_progress' && tab === 'assigned' && (
-                          <Button className="flex-1 lg:flex-none bg-blue-600 hover:bg-blue-700 rounded-xl" disabled={actionId === id} onClick={() => updateStatus(id, 'completed')}>
+                          <Button className="flex-1 lg:flex-none bg-blue-600 hover:bg-blue-700 rounded-xl" disabled={actionId === id} onClick={() => handleCompletePickupClick(p)}>
                             {actionId === id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1" />}
                             Confirm collected
                           </Button>
@@ -213,6 +260,116 @@ export function CollectorTasksPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Discrepancy Modal Workflow */}
+      <Dialog open={discrepancyModal.open} onOpenChange={open => !open && setDiscrepancyModal(m => ({ ...m, open: false }))}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle>Complete Pickup</DialogTitle>
+          </DialogHeader>
+
+          {/* STEP 1: Discrepancy Check */}
+          {discrepancyModal.step === 1 && (
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-gray-600">Does the actual collected waste match what the resident reported?</p>
+              <div className="bg-gray-50 p-4 rounded-xl space-y-2 text-sm border border-gray-100">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Reported Type:</span>
+                  <span className="font-semibold capitalize">{discrepancyModal.pickup?.wasteType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Reported Size:</span>
+                  <span className="font-semibold capitalize">{discrepancyModal.pickup?.quantity}</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 pt-2">
+                <Button onClick={() => { setHasDiscrepancy(false); setDiscrepancyModal(m => ({ ...m, step: 3 })); }} className="w-full bg-green-600 hover:bg-green-700 h-12">
+                  Yes, it matches
+                </Button>
+                <Button onClick={() => { setHasDiscrepancy(true); setDiscrepancyModal(m => ({ ...m, step: 2 })); }} variant="outline" className="w-full h-12 text-amber-700 border-amber-200 hover:bg-amber-50">
+                  <AlertTriangle className="h-4 w-4 mr-2" /> No, report difference
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Discrepancy Details */}
+          {discrepancyModal.step === 2 && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Actual Waste Type</label>
+                <select 
+                  className="w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"
+                  value={discrepancyData.actualWasteType}
+                  onChange={e => setDiscrepancyData(d => ({ ...d, actualWasteType: e.target.value }))}
+                >
+                  {['organic', 'inorganic', 'recyclable', 'hazardous', 'mixed'].map(w => (
+                    <option key={w} value={w}>{w}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Actual Quantity (Size)</label>
+                <select 
+                  className="w-full h-10 border border-gray-200 rounded-lg px-3 text-sm"
+                  value={discrepancyData.actualQuantity}
+                  onChange={e => setDiscrepancyData(d => ({ ...d, actualQuantity: e.target.value }))}
+                >
+                  {['small', 'medium', 'large'].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notes (optional)</label>
+                <Textarea 
+                  placeholder="Explain the difference..."
+                  value={discrepancyData.notes}
+                  onChange={e => setDiscrepancyData(d => ({ ...d, notes: e.target.value }))}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDiscrepancyModal(m => ({ ...m, step: 1 }))}>Back</Button>
+                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setDiscrepancyModal(m => ({ ...m, step: 3 }))}>Continue</Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {/* STEP 3: Weight Entry (Required for Intake) */}
+          {discrepancyModal.step === 3 && (
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-gray-600">Enter the measured weight of the collected waste to log it into the processing pipeline.</p>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-900">Actual Weight (kg)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    className="w-full h-14 text-2xl font-bold text-center border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:ring-emerald-500 pr-12"
+                    placeholder="0.0"
+                    value={discrepancyData.actualWeightKg}
+                    onChange={e => setDiscrepancyData(d => ({ ...d, actualWeightKg: e.target.value }))}
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">kg</span>
+                </div>
+              </div>
+
+              <DialogFooter className="mt-6 gap-2">
+                <Button variant="outline" onClick={() => setDiscrepancyModal(m => ({ ...m, step: hasDiscrepancy ? 2 : 1 }))}>Back</Button>
+                <Button 
+                  disabled={!discrepancyData.actualWeightKg || Number(discrepancyData.actualWeightKg) <= 0}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={submitCompletion}
+                >
+                  Submit & Complete
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

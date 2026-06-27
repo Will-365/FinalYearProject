@@ -41,25 +41,35 @@ export function CollectorReportsPage() {
   const exportPdf = () => {
     if (!report) return;
     const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('GreenCare Collector Report', 14, 18);
-    doc.setFontSize(10);
-    doc.text(`Period: ${period} · Generated ${new Date().toLocaleString()}`, 14, 26);
-    doc.text(`Completed: ${report.summary?.completed ?? 0} · Rate: ${report.summary?.completionRate ?? 0}%`, 14, 32);
-
-    autoTable(doc, {
-      startY: 40,
-      head: [['Date', 'Resident', 'Waste', 'Qty', 'Status']],
-      body: (report.activityLog || []).slice(0, 30).map((row) => [
-        formatAdminDate(row.preferredDate, row.preferredTimeSlot),
-        row.resident?.fullName || '—',
-        row.wasteType,
-        row.quantity,
-        row.status,
-      ]),
-    });
-    doc.save(`greencare-collector-report-${period}.pdf`);
-    success('Report downloaded');
+    const img = new Image();
+    img.src = '/src/images/greencare-icon.png';
+    const buildPdf = () => {
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GreenCare Collector Report', 36, 20);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Period: ${period} · Generated ${new Date().toLocaleString()}`, 36, 26);
+      doc.text(`Completed: ${report.summary?.completed ?? 0} · Rate: ${report.summary?.completionRate ?? 0}%`, 14, 36);
+      autoTable(doc, {
+        startY: 44,
+        head: [['Date', 'Resident', 'Waste', 'Qty', 'Status']],
+        body: (report.activityLog || []).slice(0, 30).map((row) => [
+          formatAdminDate(row.preferredDate, row.preferredTimeSlot),
+          row.resident?.fullName || '—',
+          row.wasteType,
+          row.quantity,
+          row.status,
+        ]),
+      });
+      doc.save(`greencare-collector-report-${period}.pdf`);
+      success('Report downloaded');
+    };
+    img.onload = () => {
+      doc.addImage(img, 'JPEG', 14, 10, 18, 18);
+      buildPdf();
+    };
+    img.onerror = () => buildPdf();
   };
 
   const summary = report?.summary || {};

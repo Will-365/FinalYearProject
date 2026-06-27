@@ -32,13 +32,33 @@ export function AdminReportsPage() {
   const exportPdf = () => {
     if (!report) return;
     const doc = new jsPDF();
-    doc.text('GreenCare Admin Report', 14, 18);
-    doc.setFontSize(10);
-    doc.text(`Period: ${period}`, 14, 26);
-    const s = report.summary || {};
-    doc.text(`Residents: ${s.totalResidents} | Collectors: ${s.totalCollectors} | Completed: ${s.completedCollections}`, 14, 32);
-    doc.save(`greencare-admin-report-${period}.pdf`);
-    success('Report downloaded');
+    // Embed logo in PDF
+    const img = new Image();
+    img.src = '/src/images/greencare-icon.png';
+    img.onload = () => {
+      doc.addImage(img, 'JPEG', 14, 10, 18, 18);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GreenCare Admin Report', 36, 20);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Period: ${period}`, 36, 26);
+      const s = report.summary || {};
+      doc.text(`Residents: ${s.totalResidents} | Collectors: ${s.totalCollectors} | Completed: ${s.completedCollections}`, 14, 36);
+      doc.save(`greencare-admin-report-${period}.pdf`);
+      success('Report downloaded');
+    };
+    img.onerror = () => {
+      // Fallback without logo
+      doc.setFontSize(16);
+      doc.text('GreenCare Admin Report', 14, 18);
+      doc.setFontSize(10);
+      doc.text(`Period: ${period}`, 14, 26);
+      const s = report.summary || {};
+      doc.text(`Residents: ${s.totalResidents} | Collectors: ${s.totalCollectors} | Completed: ${s.completedCollections}`, 14, 32);
+      doc.save(`greencare-admin-report-${period}.pdf`);
+      success('Report downloaded');
+    };
   };
 
   const s = report?.summary || {};

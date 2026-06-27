@@ -18,10 +18,7 @@ const STATUS_TABS = [
   { id: 'cancelled', label: 'Cancelled' },
 ];
 
-const POINTS_MAP = { small: 10, medium: 20, large: 30 };
-
 export function MyRequestsPage({ onNavigate }) {
-  const { updateUser, user } = useAuth();
   const { success, error, warning } = useAppToast();
   const [status, setStatus] = useState('');
   const [requests, setRequests] = useState([]);
@@ -30,7 +27,7 @@ export function MyRequestsPage({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [cancelId, setCancelId] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [markReadyLoading, setMarkReadyLoading] = useState(false);
 
   const loadRequests = useCallback(async (p = 1, st = status) => {
     setLoading(true);
@@ -69,18 +66,16 @@ export function MyRequestsPage({ onNavigate }) {
     }
   };
 
-  const handleConfirm = async (id, quantity) => {
-    setConfirmLoading(true);
+  const handleMarkReady = async (id) => {
+    setMarkReadyLoading(true);
     try {
-      const res = await collectionService.confirmCollection(id);
-      const earned = res.data?.pointsEarned || POINTS_MAP[quantity] || 20;
-      updateUser({ points: (user?.points || 0) + earned });
-      success(`Collection confirmed! +${earned} pts earned. Thank you! 🎉`);
+      await collectionService.confirmCollection(id);
+      success('Marked as ready! Awaiting admin approval.');
       loadRequests(page, status);
     } catch (err) {
       error(err.message);
     } finally {
-      setConfirmLoading(false);
+      setMarkReadyLoading(false);
     }
   };
 
@@ -130,9 +125,9 @@ export function MyRequestsPage({ onNavigate }) {
                 key={req._id || req.id}
                 request={req}
                 onCancel={setCancelId}
-                onConfirm={handleConfirm}
+                onMarkReady={handleMarkReady}
                 cancelLoading={cancelLoading}
-                confirmLoading={confirmLoading}
+                markReadyLoading={markReadyLoading}
               />
             ))}
           </div>

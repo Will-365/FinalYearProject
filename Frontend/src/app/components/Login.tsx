@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Recycle, UserPlus, LogIn, Leaf, ArrowLeft } from 'lucide-react';
+import { UserPlus, LogIn, Leaf, ArrowLeft } from 'lucide-react';
+import logo from '@/images/greencare-icon.png';
 
 interface LoginProps {
   onLogin: (role: string) => void;
@@ -27,11 +28,9 @@ export function Login({ onLogin, onBackToHome, onForgotPassword }: LoginProps) {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center mb-4">
-            <div className="bg-green-600 p-3 rounded-full">
-              <Recycle className="h-8 w-8 text-white" />
-            </div>
+            <img src={logo} alt="GreenCare Logo" className="h-20 w-20 rounded-2xl object-cover shadow-lg ring-4 ring-green-200" />
           </div>
-          <h1 className="font-bold text-3xl text-gray-900">Green Care Rwanda</h1>
+          <h1 className="font-bold text-3xl text-gray-900">GreenCare Rwanda</h1>
           <p className="text-gray-600 mt-2">Circular Waste Management Platform</p>
         </div>
 

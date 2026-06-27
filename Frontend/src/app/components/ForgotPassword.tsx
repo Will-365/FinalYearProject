@@ -4,6 +4,7 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Recycle, ArrowLeft, Mail, Lock, CheckCircle2, KeyRound } from 'lucide-react';
+import logo from '@/images/greencare-icon.png';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 
@@ -86,11 +87,9 @@ export function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center mb-4">
-            <div className="bg-green-600 p-3 rounded-full">
-              <Recycle className="h-8 w-8 text-white" />
-            </div>
+            <img src={logo} alt="GreenCare Logo" className="h-20 w-20 rounded-2xl object-cover shadow-lg ring-4 ring-green-200" />
           </div>
-          <h1 className="font-bold text-3xl text-gray-900">Green Care Rwanda</h1>
+          <h1 className="font-bold text-3xl text-gray-900">GreenCare Rwanda</h1>
           <p className="text-gray-600 mt-2">Reset Your Password</p>
         </div>
 

@@ -1,7 +1,7 @@
 import { binColorMap, wasteTypeConfig } from '@/utils/formatters';
-import { WasteTypeBadge, PointsBadge } from '@/components/ui/Badge';
+import { WasteTypeBadge } from '@/components/ui/Badge';
 import { Progress } from '@/app/components/ui/progress';
-import { Lightbulb } from 'lucide-react';
+import { Info, Lightbulb } from 'lucide-react';
 
 export function ScanResult({ result, onRequestCollection }) {
   if (!result) return null;
@@ -24,7 +24,15 @@ export function ScanResult({ result, onRequestCollection }) {
           </div>
           <p className="text-lg font-bold text-slate-900">{result.recommendation}</p>
         </div>
-        <PointsBadge points={`+${result.pointsEarned || 5}`} />
+      </div>
+
+      {/* Points info callout — scan does NOT award points */}
+      <div className="mb-4 flex gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+        <p className="text-sm text-blue-800">
+          <span className="font-semibold">✅ Classified as {result.wasteType}.</span>{' '}
+          Points are awarded after your collection is approved by admin — not on scan.
+        </p>
       </div>
 
       <div className="mb-4">
@@ -65,7 +73,7 @@ export function ScanResult({ result, onRequestCollection }) {
           onClick={() => onRequestCollection(result)}
           className="w-full rounded-xl bg-green-600 py-3 text-sm font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-green-700 hover:shadow-md"
         >
-          Request Collection for This Waste
+          Request Collection for This Waste →
         </button>
       )}
     </div>

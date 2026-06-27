@@ -12,7 +12,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 
 export function ScanPage({ onNavigate }) {
-  const { user, updateUser, setCollectionPrefill } = useAuth();
+  const { user, setCollectionPrefill } = useAuth();
   const { success, error } = useAppToast();
   const [tab, setTab] = useState('scan');
   const [preview, setPreview] = useState(null);
@@ -54,8 +54,7 @@ export function ScanPage({ onNavigate }) {
       const base64 = await fileToBase64(preview.file);
       const data = await wasteService.scan(base64, preview.mimeType);
       setResult(data);
-      updateUser({ points: (user?.points || 0) + (data.pointsEarned || 5) });
-      success(`Waste scanned successfully! +${data.pointsEarned || 5} pts earned 🌿`);
+      success('Waste scanned! Request a collection to earn points. 🌿');
     } catch (err) {
       error(err.message || 'Scan failed. Please try a clearer image.');
     } finally {

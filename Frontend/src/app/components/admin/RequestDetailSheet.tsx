@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { adminCollectionService, adminCouponService } from '@/services/adminService';
 import { formatAdminDate, statusBadgeClass, priorityBadgeClass, wasteBadgeClass } from '@/utils/adminHelpers';
 import { useToast } from '@/hooks/useToast';
-import { Phone, Mail, MapPin, User, Gift, Loader2, CheckCircle2 } from 'lucide-react';
+import { Phone, Mail, MapPin, User, Gift, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface RequestDetailSheetProps {
   open: boolean;
@@ -49,6 +49,7 @@ export function RequestDetailSheet({ open, onClose, requestId, onRefresh }: Requ
   }, [open, requestId]);
 
   const req = data?.request || data;
+  const intake = data?.intake;
 
   const handleApprove = async () => {
     if (!requestId) return;
@@ -137,6 +138,28 @@ export function RequestDetailSheet({ open, onClose, requestId, onRefresh }: Requ
                 <p className="text-xs font-semibold uppercase text-green-700 mb-2">Linked Scan</p>
                 <p className="text-sm capitalize">{req.wasteScan.wasteType} · {req.wasteScan.confidence}% confidence</p>
                 <p className="text-sm text-gray-600 mt-1">{req.wasteScan.recommendation}</p>
+              </div>
+            )}
+
+            {intake?.hasDiscrepancy && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <p className="font-semibold text-red-900">Quantity Discrepancy Reported</p>
+                </div>
+                <p className="text-sm text-red-800">
+                  The collector reported a discrepancy for this collection. Please resolve it in the waste-intake section before approving.
+                </p>
+                {intake.discrepancyNote && (
+                  <div className="mt-2 p-3 bg-white rounded-lg border border-red-100 text-sm text-gray-700 italic">
+                    "{intake.discrepancyNote}"
+                  </div>
+                )}
+                {intake.discrepancyResolved && (
+                  <Badge className="mt-2 bg-green-100 text-green-800 border-green-200">
+                    <CheckCircle2 className="h-3 w-3 mr-1 inline" />Resolved
+                  </Badge>
+                )}
               </div>
             )}
 

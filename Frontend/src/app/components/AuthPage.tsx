@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { Recycle, Home, Truck, Building2, Check, Eye, EyeOff, ChevronLeft, Info, AlertTriangle } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { useToast } from '@/hooks/useToast';
+import { GreenCareLogo } from '@/app/components/ui/GreenCareLogo';
 
 interface AuthPageProps {
   onLogin: (role: string) => void;
   onBackToHome?: () => void;
   onShowLogin?: () => void;
+  onBuyerClick?: () => void;
 }
 
 type AccountRole = 'resident' | 'collector' | 'business' | null;
@@ -441,11 +443,7 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
         <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Recycle style={{ width: 32, height: 32, color: '#4ade80' }} strokeWidth={1.5} />
-            <div>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fff' }}>Green Care</div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>Rwanda</div>
-            </div>
+            <GreenCareLogo size="lg" variant="dark" showTagline />
           </div>
           {/* Center */}
           <div>
@@ -555,6 +553,13 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
               border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 32 }}>
               Continue
             </button>
+            <div style={{ marginTop: 24, textAlign: 'center' }}>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 8 }}>Looking to buy recycled products?</p>
+              <button onClick={() => onBuyerClick && onBuyerClick()} style={{ width: '100%', padding: 14, background: '#f0fdf4', color: '#16a34a',
+                border: '1.5px solid #16a34a', borderRadius: 8, fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
+                Join as a Buyer
+              </button>
+            </div>
           </div>
         )}
 

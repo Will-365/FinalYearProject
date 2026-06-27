@@ -106,36 +106,67 @@ export function AdminCollectorManagement() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {collectors.map((c) => {
-              const id = c._id || c.id;
-              return (
-                <Card key={id} className="rounded-2xl border-gray-100 shadow-sm hover:-translate-y-0.5 transition-all">
-                  <CardContent className="pt-5">
-                    <div className="flex items-start gap-3">
-                      <div className="relative">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 font-bold text-green-800">{getInitials(c.fullName)}</div>
-                        <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${collectorStatusDot(c.collectorStatus)}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold truncate">{c.fullName}</p>
-                        <p className="text-xs text-gray-500">{c.phone}</p>
-                        <p className="text-xs text-gray-400">{c.collectorZone?.district} · {vehicleEmoji(c.vehicleType)}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      <Badge variant="outline">{c.activeAssignments ?? 0} active</Badge>
-                      <Badge variant="outline">{c.totalPickups ?? 0} pickups</Badge>
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setDetailId(id)}><Eye className="h-3 w-3 mr-1" />View</Button>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => { setEditCollector(c); setFormOpen(true); }}><Edit className="h-3 w-3 mr-1" />Edit</Button>
-                      <Button size="sm" variant="outline" className="text-red-600" onClick={() => setDeleteTarget(c)}><Trash2 className="h-3 w-3" /></Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-medium">
+                <tr>
+                  <th className="px-6 py-4">Collector</th>
+                  <th className="px-6 py-4">Contact</th>
+                  <th className="px-6 py-4">Zone & Vehicle</th>
+                  <th className="px-6 py-4">Stats</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {collectors.map((c) => {
+                  const id = c._id || c.id;
+                  return (
+                    <tr key={id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 font-bold text-green-800">
+                              {getInitials(c.fullName)}
+                            </div>
+                            <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${collectorStatusDot(c.collectorStatus)}`} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900">{c.fullName}</p>
+                            <p className="text-xs text-gray-500 capitalize">{c.collectorStatus?.replace('_', ' ')}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-600">
+                        {c.phone}
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-gray-900">{c.collectorZone?.district || 'Unassigned'}</p>
+                        <p className="text-xs text-gray-500">{vehicleEmoji(c.vehicleType)} {c.vehicleType || 'No vehicle'}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs font-medium bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md w-max">{c.activeAssignments ?? 0} active</span>
+                          <span className="text-xs font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded-md w-max">{c.totalPickups ?? 0} pickups</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700" onClick={() => setDetailId(id)} title="View">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-amber-600 hover:bg-amber-50 hover:text-amber-700" onClick={() => { setEditCollector(c); setFormOpen(true); }} title="Edit">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setDeleteTarget(c)} title="Delete">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
           <div className="flex justify-between">
             <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>

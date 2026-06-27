@@ -2,20 +2,42 @@ import { useState } from 'react';
 import { formatDateWithSlot, wasteTypeConfig } from '@/utils/formatters';
 import { StatusBadge, WasteTypeBadge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { Phone, User, MapPin } from 'lucide-react';
+import { Phone, User, MapPin, Clock, CheckCircle2, Loader2 } from 'lucide-react';
 
 export function RequestCard({
   request,
   onCancel,
-  onConfirm,
+  onMarkReady,
   cancelLoading,
-  confirmLoading,
+  markReadyLoading,
 }) {
   const [expanded, setExpanded] = useState(false);
   const id = request._id || request.id;
   const cfg = wasteTypeConfig[request.wasteType] || wasteTypeConfig.unknown;
   const canCancel = ['pending', 'assigned'].includes(request.status);
-  const canConfirm = request.status === 'in_progress';
+  const canMarkReady = request.status === 'in_progress' && !request.residentConfirmed;
+  const isCompleted = request.status === 'completed';
+  const adminApproved = request.adminApproved;
+
+  // Approval status display for completed requests
+  const ApprovalBadge = () => {
+    if (!isCompleted) return null;
+    if (adminApproved) {
+      const pts = request.pointsAwarded || request.pointsEarned;
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Approved{pts ? ` — +${pts} pts` : ''}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+        <Clock className="h-3.5 w-3.5" />
+        Awaiting Admin Approval
+      </span>
+    );
+  };
 
   return (
     <>
@@ -40,7 +62,10 @@ export function RequestCard({
                 </p>
               </div>
             </div>
-            <StatusBadge status={request.status} />
+            <div className="flex flex-col items-end gap-1.5">
+              <StatusBadge status={request.status} />
+              <ApprovalBadge />
+            </div>
           </div>
         </button>
 
@@ -55,14 +80,15 @@ export function RequestCard({
               Cancel Request
             </button>
           )}
-          {canConfirm && (
+          {canMarkReady && (
             <button
               type="button"
-              onClick={() => onConfirm?.(id, request.quantity)}
-              disabled={confirmLoading}
-              className="rounded-xl bg-green-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-green-700 disabled:opacity-50"
+              onClick={() => onMarkReady?.(id)}
+              disabled={markReadyLoading}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
             >
-              Confirm Collection
+              {markReadyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              I'm Ready
             </button>
           )}
         </div>
@@ -77,7 +103,10 @@ export function RequestCard({
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between">
             <dt className="text-slate-500">Status</dt>
-            <dd><StatusBadge status={request.status} /></dd>
+            <dd className="flex flex-col items-end gap-1">
+              <StatusBadge status={request.status} />
+              <ApprovalBadge />
+            </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-slate-500">Waste type</dt>
@@ -117,7 +146,7 @@ export function RequestCard({
               {request.collector.phone && (
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-blue-600" />
-                  <span>{request.collector.phone}</span>
+                  <a href={`tel:${request.collector.phone}`} className="text-blue-700 underline">{request.collector.phone}</a>
                 </div>
               )}
             </div>

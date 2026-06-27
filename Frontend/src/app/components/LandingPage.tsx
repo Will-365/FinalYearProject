@@ -1,31 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/app/components/ui/button';
-import { 
-  Recycle, 
-  Leaf, 
-  Users, 
-  TrendingUp, 
-  Award,
-  CheckCircle2,
-  ArrowRight,
-  Menu,
-  X,
-  Target,
-  Heart,
-  Globe,
-  ChevronLeft,
-  ChevronRight,
-  Facebook,
-  Twitter,
-  Instagram,
-  Mail,
-  Phone,
-  MapPin
+import {
+  Recycle,
+  Shield, BadgeCheck, ChevronRight, Menu, X, Facebook, Twitter, Instagram,
+  ArrowRight, BarChart2, Truck, Leaf, MapPin, TreePine, Star, Trophy, Users,
+  TrendingUp, Award, CheckCircle2, Target, Heart, Globe, ChevronLeft,
+  Mail, Phone, ShoppingBag
 } from 'lucide-react';
+import { GreenCareLogo } from '@/app/components/ui/GreenCareLogo';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onShopClick?: () => void;
+  onBuyerClick?: () => void;
 }
 
 const heroImages = [
@@ -78,21 +66,18 @@ const testimonials = [
   {
     name: 'Jean Mutabazi',
     role: 'Resident, Kigali',
-    image: '👨🏾',
     rating: 5,
     text: 'Green Care has transformed how we manage waste in our community. The app makes scheduling pickups so easy, and I love earning rewards for recycling!'
   },
   {
     name: 'Marie Uwase',
     role: 'Business Owner',
-    image: '👩🏾',
     rating: 5,
     text: 'As a business owner, the comprehensive waste management system helps us stay compliant while reducing our environmental footprint. Highly recommended!'
   },
   {
     name: 'Patrick Nkusi',
     role: 'Collector',
-    image: '👨🏾‍💼',
     rating: 5,
     text: 'The mobile collector app has made my job so much easier. Route optimization saves time and fuel, and the digital tracking keeps everything organized.'
   }
@@ -105,7 +90,7 @@ const stats = [
   { raw: 1200, suffix: '+', label: 'Trees Planted' }
 ];
 
-export function LandingPage({ onGetStarted }: LandingPageProps) {
+export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: LandingPageProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -185,23 +170,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => scrollToSection('hero')}>
-              <div className={`p-2 rounded-lg transition-colors ${
-                scrolled ? 'bg-green-600' : 'bg-white'
-              }`}>
-                <Recycle className={`h-7 w-7 ${scrolled ? 'text-white' : 'text-green-600'}`} />
-              </div>
-              <div>
-                <h1 className={`font-bold text-xl transition-colors ${
-                  scrolled ? 'text-gray-900' : 'text-white'
-                }`}>
-                  Green Care
-                </h1>
-                <p className={`text-xs transition-colors ${
-                  scrolled ? 'text-gray-600' : 'text-green-100'
-                }`}>
-                  Rwanda
-                </p>
-              </div>
+              <GreenCareLogo size="md" variant={scrolled ? 'light' : 'dark'} showTagline />
             </div>
 
             {/* Desktop Menu */}
@@ -239,10 +208,18 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 Testimonials
               </button>
               <Button 
+                onClick={onShopClick}
+                variant="outline"
+                className={`border-green-500 text-green-500 hover:bg-green-500 hover:text-white transition-colors bg-transparent ${scrolled ? '' : 'border-white text-white hover:bg-white hover:text-green-600'}`}
+              >
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                Eco Shop
+              </Button>
+              <Button 
                 onClick={onGetStarted}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                Get Started
+                Sign In
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -940,11 +917,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '1.25rem',
-                          background: '#f3f4f6'
+                          fontSize: '0.875rem',
+                          fontWeight: 'bold',
+                          color: 'var(--gc-green)',
+                          background: 'rgba(22, 163, 74, 0.1)'
                         }}
                       >
-                        {testimonial.image}
+                        {testimonial.name.split(' ').map(n => n[0]).join('')}
                       </div>
                       <div>
                         <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--gc-dark)' }}>
@@ -1174,9 +1153,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           {/* Company Info */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <Recycle style={{ width: '32px', height: '32px', color: 'var(--gc-green-light)' }} strokeWidth={1.5} />
+              <img src="/src/images/greencare-icon.png" alt="GreenCare Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
               <div>
-                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>Green Care</div>
+                <div style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>GreenCare</div>
                 <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>Rwanda</div>
               </div>
             </div>

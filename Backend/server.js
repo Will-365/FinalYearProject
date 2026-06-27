@@ -26,6 +26,7 @@ import adminCouponRoutes from './routes/admin/adminCouponRoutes.js';
 import collectorRoutes from './routes/collectorRoutes.js';
 import recyclingRoutes from './routes/recyclingRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import buyerRoutes from './routes/buyerRoutes.js';
 import messagingRoutes from './routes/messagingRoutes.js';
 import reportsRoutes from './routes/reportsRoutes.js';
 
@@ -55,6 +56,7 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/recycling', recyclingRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/buyers',   buyerRoutes);
 app.use('/api/messaging', messagingRoutes);
 app.use('/api/reports', reportsRoutes);
 

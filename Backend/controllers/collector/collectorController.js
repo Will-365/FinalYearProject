@@ -82,7 +82,15 @@ export const getPickup = async (req, res, next) => {
 // PATCH /api/collector/pickups/:id/status
 export const updatePickupStatus = async (req, res, next) => {
   try {
-    const { status, collectionNote } = req.body;
+    const {
+      status,
+      collectionNote,
+      // Discrepancy fields — collector fills these when actual waste differs from what resident declared
+      hasDiscrepancy,
+      actualWeightKg,
+      discrepancyNote,
+    } = req.body;
+
     const allowed = ['in_progress', 'completed'];
     if (!allowed.includes(status)) {
       return res.status(400).json({ success: false, message: 'Status must be in_progress or completed' });
@@ -105,42 +113,69 @@ export const updatePickupStatus = async (req, res, next) => {
 
     request.status = status;
     if (collectionNote) request.collectionNote = collectionNote;
+
     if (status === 'completed') {
       request.confirmedAt = new Date();
       await User.findByIdAndUpdate(req.user.id, { $inc: { totalPickups: 1 } });
 
-      // Auto-log waste intake for admin to convert into products
-      const weightKg = QUANTITY_KG[request.quantity] || 5;
-      await WasteCategoryIntake.create({
-        recordedBy: req.user.id,
-        collectionRequest: request._id,
-        wasteType: request.wasteType,
-        weightKg,
-        location: request.location || {},
-        intakeDate: new Date(),
-        processingStatus: 'received',
-        notes: `Auto-logged from completed pickup #${request._id}`,
-      });
+      // Expected weight from resident-declared quantity
+      const expectedWeightKg = QUANTITY_KG[request.quantity] || 5;
+      const foundWeightKg    = actualWeightKg ? parseFloat(actualWeightKg) : expectedWeightKg;
 
+      // Detect discrepancy: collector says actual differs from declared
+      const isDiscrepancy = hasDiscrepancy === true || hasDiscrepancy === 'true'
+        || (actualWeightKg && Math.abs(foundWeightKg - expectedWeightKg) > expectedWeightKg * 0.2);
+
+      // Auto-log waste intake with discrepancy info
+      const intakeData = {
+        recordedBy:       req.user.id,
+        collectionRequest: request._id,
+        wasteType:        request.wasteType,
+        weightKg:         foundWeightKg,
+        location:         request.location || {},
+        intakeDate:       new Date(),
+        processingStatus: 'received',
+        declaredQuantity: request.quantity,
+        actualWeightKg:   foundWeightKg,
+        hasDiscrepancy:   isDiscrepancy,
+        discrepancyNote:  isDiscrepancy ? (discrepancyNote || `Actual ${foundWeightKg}kg vs expected ~${expectedWeightKg}kg for "${request.quantity}" quantity`) : null,
+        notes: collectionNote || `Auto-logged from completed pickup #${request._id}`,
+        processingHistory: [{
+          stage:     'received',
+          updatedBy: req.user.id,
+          note:      `Collected by ${req.user.id}. Weight: ${foundWeightKg}kg. ${isDiscrepancy ? '⚠️ Discrepancy reported.' : ''}`,
+          timestamp: new Date(),
+        }],
+      };
+
+      await WasteCategoryIntake.create(intakeData);
+
+      // Notify resident
       await createNotification({
-        userId: request.resident,
-        type: 'status',
-        title: 'Collection completed',
-        message: 'Your waste has been collected. Please confirm in the app — admin will approve your points.',
-        relatedId: request._id,
+        userId:  request.resident,
+        type:    'status',
+        title:   'Collection completed',
+        message: isDiscrepancy
+          ? 'Your waste was collected. The collector noted a quantity difference — admin will review and award your points.'
+          : 'Your waste has been collected! Admin will review and approve your points shortly.',
+        relatedId:    request._id,
         relatedModel: 'CollectionRequest',
       });
 
-      // Notify admins that waste is ready for processing
+      // Notify admins — flag discrepancies prominently
       const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
+      const adminMsg = isDiscrepancy
+        ? `⚠️ DISCREPANCY: ${foundWeightKg}kg collected vs ~${expectedWeightKg}kg expected for "${request.quantity}" ${request.wasteType} in ${request.location?.district || 'unknown'}. Note: ${discrepancyNote || '—'}`
+        : `${foundWeightKg}kg ${request.wasteType} collected in ${request.location?.district || 'unknown'}. Ready for processing pipeline.`;
+
       await Promise.all(
         admins.map((admin) =>
           createNotification({
-            userId: admin._id,
-            type: 'admin',
-            title: 'Waste collected — ready for processing',
-            message: `${weightKg}kg ${request.wasteType} collected in ${request.location?.district || 'unknown'}. Convert to products in Recycling module.`,
-            relatedId: request._id,
+            userId:       admin._id,
+            type:         isDiscrepancy ? 'admin' : 'admin',
+            title:        isDiscrepancy ? '⚠️ Waste collected — quantity discrepancy' : 'Waste collected — ready for processing',
+            message:      adminMsg,
+            relatedId:    request._id,
             relatedModel: 'CollectionRequest',
           })
         )

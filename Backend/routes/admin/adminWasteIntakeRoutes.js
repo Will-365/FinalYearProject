@@ -2,18 +2,30 @@ import express from 'express';
 import {
   getWasteIntakeLog,
   getWasteIntakeAnalytics,
+  getDiscrepancies,
   logWasteIntake,
-  updateIntakeStatus,
+  advancePipelineStage,
+  convertToProduct,
+  resolveDiscrepancy,
 } from '../../controllers/admin/adminWasteIntakeController.js';
 import { protect, authorize } from '../../middleware/authMiddleware.js';
 
 const router = express.Router();
-
 router.use(protect, authorize('admin'));
 
-router.get('/analytics', getWasteIntakeAnalytics);
-router.get('/', getWasteIntakeLog);
+// Analytics & summaries
+router.get('/analytics',     getWasteIntakeAnalytics);
+router.get('/discrepancies', getDiscrepancies);
+
+// CRUD
+router.get('/',  getWasteIntakeLog);
 router.post('/', logWasteIntake);
-router.patch('/:id/status', updateIntakeStatus);
+
+// Pipeline management
+router.patch('/:id/stage',              advancePipelineStage);   // move to next stage
+router.post('/:id/convert-to-product',  convertToProduct);       // packaging → product (upload image etc.)
+
+// Discrepancy resolution
+router.patch('/:id/resolve-discrepancy', resolveDiscrepancy);
 
 export default router;

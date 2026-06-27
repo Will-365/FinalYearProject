@@ -1,4 +1,5 @@
 import WasteScan from '../models/WasteScan.js';
+import User from '../models/User.js';
 
 // Gemini API call helper
 const analyzeImageWithGemini = async (base64Image, mimeType) => {
@@ -95,6 +96,8 @@ export const scanWaste = async (req, res, next) => {
     const { parsed, raw } = await analyzeImageWithGemini(base64Data, resolvedMime);
 
     // Save the scan record (classification only — no points awarded here)
+    await User.findByIdAndUpdate(req.user.id, { $inc: { totalWasteScans: 1 } });
+
     const scan = await WasteScan.create({
       resident: req.user.id,
       imageUrl: `scan_${Date.now()}`, // placeholder; integrate cloud storage (S3/Cloudinary) later
@@ -103,7 +106,6 @@ export const scanWaste = async (req, res, next) => {
       recommendation: parsed.recommendation || 'Please consult your local waste authority.',
       binColor: parsed.binColor || 'unknown',
       detectedItems: parsed.detectedItems || [],
-      pointsEarned: 0,
       rawGeminiResponse: raw,
     });
 

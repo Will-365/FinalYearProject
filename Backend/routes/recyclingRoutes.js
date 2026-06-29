@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getNearestCenters,
   getCenter,
+  createCenter,
   scheduleDropOff,
   getMyDropOffs,
   cancelDropOff,
@@ -10,14 +11,16 @@ import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+// Public (authenticated) routes
 router.get('/centers/nearest', protect, getNearestCenters);
 router.get('/centers/:id', protect, getCenter);
 
-router.use(protect);
-router.use(authorize('resident'));
+// Admin-only route
+router.post('/centers', protect, authorize('admin'), createCenter);
 
-router.post('/drop-offs', scheduleDropOff);
-router.get('/drop-offs', getMyDropOffs);
-router.patch('/drop-offs/:id/cancel', cancelDropOff);
+// Resident-only routes
+router.post('/drop-offs', protect, authorize('resident'), scheduleDropOff);
+router.get('/drop-offs', protect, authorize('resident'), getMyDropOffs);
+router.patch('/drop-offs/:id/cancel', protect, authorize('resident'), cancelDropOff);
 
 export default router;

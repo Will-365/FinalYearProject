@@ -42,6 +42,34 @@ export const getNearestCenters = async (req, res, next) => {
   }
 };
 
+// POST /api/recycling/centers (Admin only)
+export const createCenter = async (req, res, next) => {
+  try {
+    const { name, address, district, sector, latitude, longitude, hours, phone, acceptedMaterials } = req.body;
+    
+    if (!name || !address || !latitude || !longitude) {
+      return res.status(400).json({ success: false, message: 'Name, address, latitude, and longitude are required' });
+    }
+
+    const center = await RecyclingCenter.create({
+      name,
+      address,
+      district: district || 'Kigali',
+      sector: sector || 'Kigali',
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      hours: hours || 'Mon-Sat 8:00 AM - 6:00 PM',
+      phone: phone || '',
+      acceptedMaterials: acceptedMaterials || ['plastic', 'paper', 'glass', 'metal'],
+      isActive: true
+    });
+
+    res.status(201).json({ success: true, message: 'Recycling center created', data: center });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // GET /api/recycling/centers/:id
 export const getCenter = async (req, res, next) => {
   try {

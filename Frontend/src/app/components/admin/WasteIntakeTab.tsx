@@ -7,12 +7,13 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Skeleton } from '@/app/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/app/components/ui/dialog';
 import { adminWasteIntakeService } from '@/services/adminService';
+import { getStoredToken, api } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { formatKg, wasteBadgeClass } from '@/utils/adminHelpers';
 import { rwandaLocations } from '@/app/data/rwandaLocations';
-import { Scale, Plus, Package, CheckCircle2, ArrowUpRight, TrendingUp, Layers, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Scale, Plus, Package, CheckCircle2, ArrowUpRight, TrendingUp, Layers, AlertTriangle, ShieldCheck, MapPin } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const PERIODS = [
@@ -40,6 +41,11 @@ export function WasteIntakeTab() {
   const [convertModal, setConvertModal] = useState<any>({ open: false, item: null });
   const [convertData, setConvertData] = useState({ name: '', category: '', cashPrice: '', pointsCost: '', stock: '', description: '', imageUrl: '' });
   const [converting, setConverting] = useState(false);
+
+  // Center Creation state
+  const [createCenterOpen, setCreateCenterOpen] = useState(false);
+  const [creatingCenter, setCreatingCenter] = useState(false);
+  const [centerForm, setCenterForm] = useState({ name: '', address: '', latitude: '', longitude: '', district: '', hours: '' });
 
   // Discrepancy resolution
   const [discrepancies, setDiscrepancies] = useState<any[]>([]);
@@ -161,6 +167,37 @@ export function WasteIntakeTab() {
       setConverting(false);
     }
   };
+
+  const handleCreateCenter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!centerForm.name || !centerForm.address || !centerForm.latitude || !centerForm.longitude) {
+      showToast({ type: 'error', title: 'Error', message: 'Please fill all required fields.' });
+      return;
+    }
+    setCreatingCenter(true);
+    try {
+      // Use the pre-configured axios api instance (correct base URL + auto auth token)
+      const { data } = await api.post('/recycling/centers', {
+        name: centerForm.name,
+        address: centerForm.address,
+        latitude: parseFloat(centerForm.latitude),
+        longitude: parseFloat(centerForm.longitude),
+        district: centerForm.district || 'Kigali',
+        hours: centerForm.hours || 'Mon-Sat 8:00 AM - 6:00 PM',
+      });
+      if (data.success) {
+        showToast({ type: 'success', title: 'Success', message: 'Recycling center created successfully!' });
+        setCreateCenterOpen(false);
+        setCenterForm({ name: '', address: '', latitude: '', longitude: '', district: '', hours: '' });
+      } else {
+        showToast({ type: 'error', title: 'Error', message: data.message || 'Failed to create center' });
+      }
+    } catch (err: any) {
+      showToast({ type: 'error', title: 'Error', message: err.message || 'Network error. Check your connection.' });
+    } finally {
+      setCreatingCenter(false);
+    }
+  };
   const updateStatus = async (id: string, processingStatus: string) => {
     try {
       await adminWasteIntakeService.advanceStage(id, { stage: processingStatus });
@@ -206,9 +243,57 @@ export function WasteIntakeTab() {
           <h2 className="text-xl font-bold text-[#0d1f13]">Waste Intake</h2>
           <p className="text-sm text-gray-500">Track waste received and processing status</p>
         </div>
-        <Button onClick={() => setLogOpen(true)} className="bg-green-600 hover:bg-green-700">
-          <Plus className="h-4 w-4 mr-2" /> Log Intake
-        </Button>
+        
+        <div className="flex items-center gap-3">
+          <Dialog open={createCenterOpen} onOpenChange={setCreateCenterOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-50">
+                <MapPin className="h-4 w-4 mr-2" />
+                Add Center
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Recycling Center</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateCenter} className="space-y-4">
+                <div>
+                  <Label>Center Name *</Label>
+                  <Input required value={centerForm.name} onChange={e => setCenterForm({ ...centerForm, name: e.target.value })} placeholder="e.g. Kicukiro Central Hub" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Address *</Label>
+                  <Input required value={centerForm.address} onChange={e => setCenterForm({ ...centerForm, address: e.target.value })} placeholder="123 Main St" className="mt-1" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Latitude *</Label>
+                    <Input required type="number" step="any" value={centerForm.latitude} onChange={e => setCenterForm({ ...centerForm, latitude: e.target.value })} placeholder="-1.9441" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Longitude *</Label>
+                    <Input required type="number" step="any" value={centerForm.longitude} onChange={e => setCenterForm({ ...centerForm, longitude: e.target.value })} placeholder="30.0619" className="mt-1" />
+                  </div>
+                </div>
+                <div>
+                  <Label>District</Label>
+                  <Input value={centerForm.district} onChange={e => setCenterForm({ ...centerForm, district: e.target.value })} placeholder="Kigali" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Operating Hours</Label>
+                  <Input value={centerForm.hours} onChange={e => setCenterForm({ ...centerForm, hours: e.target.value })} placeholder="Mon-Sat 8AM - 6PM" className="mt-1" />
+                </div>
+                <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={creatingCenter}>
+                  {creatingCenter ? 'Creating...' : 'Create Center'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Button onClick={() => setLogOpen(true)} className="bg-green-600 hover:bg-green-700">
+            <Plus className="h-4 w-4 mr-2" /> Log Intake
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">

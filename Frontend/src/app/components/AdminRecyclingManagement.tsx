@@ -447,20 +447,103 @@ export function AdminRecyclingManagement() {
     return batch.status === paverStatusFilter;
   });
 
+  // Center Creation state
+  const [createCenterOpen, setCreateCenterOpen] = useState(false);
+  const [creatingCenter, setCreatingCenter] = useState(false);
+  const [centerForm, setCenterForm] = useState({ name: '', address: '', latitude: '', longitude: '', district: '', hours: '' });
+
+  const handleCreateCenter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!centerForm.name || !centerForm.address || !centerForm.latitude || !centerForm.longitude) {
+      toast.error('Please fill all required fields.');
+      return;
+    }
+    setCreatingCenter(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/recycling/centers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(centerForm),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Recycling center created successfully!');
+        setCreateCenterOpen(false);
+        setCenterForm({ name: '', address: '', latitude: '', longitude: '', district: '', hours: '' });
+      } else {
+        toast.error(data.message || 'Failed to create center');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Network error');
+    } finally {
+      setCreatingCenter(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-bold text-2xl">Recycling & Processing Management</h2>
           <p className="text-gray-600 text-sm mt-1">Manage waste processing, production, and circular economy outputs</p>
         </div>
-        <Button
-          onClick={() => setTemperatureDialogOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Thermometer className="h-4 w-4 mr-2" />
-          View Temperatures
-        </Button>
+        <div className="flex items-center gap-3">
+          <Dialog open={createCenterOpen} onOpenChange={setCreateCenterOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-green-600 hover:bg-green-700">
+                <MapPin className="h-4 w-4 mr-2" />
+                Add Center
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Recycling Center</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateCenter} className="space-y-4">
+                <div>
+                  <Label>Center Name *</Label>
+                  <Input required value={centerForm.name} onChange={e => setCenterForm({ ...centerForm, name: e.target.value })} placeholder="e.g. Kicukiro Central Hub" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Address *</Label>
+                  <Input required value={centerForm.address} onChange={e => setCenterForm({ ...centerForm, address: e.target.value })} placeholder="123 Main St" className="mt-1" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Latitude *</Label>
+                    <Input required type="number" step="any" value={centerForm.latitude} onChange={e => setCenterForm({ ...centerForm, latitude: e.target.value })} placeholder="-1.9441" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>Longitude *</Label>
+                    <Input required type="number" step="any" value={centerForm.longitude} onChange={e => setCenterForm({ ...centerForm, longitude: e.target.value })} placeholder="30.0619" className="mt-1" />
+                  </div>
+                </div>
+                <div>
+                  <Label>District</Label>
+                  <Input value={centerForm.district} onChange={e => setCenterForm({ ...centerForm, district: e.target.value })} placeholder="Kigali" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Operating Hours</Label>
+                  <Input value={centerForm.hours} onChange={e => setCenterForm({ ...centerForm, hours: e.target.value })} placeholder="Mon-Sat 8AM - 6PM" className="mt-1" />
+                </div>
+                <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={creatingCenter}>
+                  {creatingCenter ? 'Creating...' : 'Create Center'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Button
+            onClick={() => setTemperatureDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Thermometer className="h-4 w-4 mr-2" />
+            Temperatures
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="intake" className="space-y-6">

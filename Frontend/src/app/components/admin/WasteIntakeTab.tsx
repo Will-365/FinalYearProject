@@ -442,7 +442,7 @@ export function WasteIntakeTab() {
               <p className="text-sm text-gray-400 mt-1">All collector reports have been resolved</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-visible w-full" style={{overflowX: 'auto'}}>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-[12px] font-semibold text-gray-500 uppercase tracking-wider">
@@ -492,7 +492,7 @@ export function WasteIntakeTab() {
           ) : records.length === 0 ? (
             <div className="py-12 text-center"><Scale className="h-10 w-10 mx-auto text-gray-300 mb-2" /><p className="font-medium text-gray-500">No waste intake logged for this period</p></div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-visible w-full" style={{overflowX: 'auto'}}>
               <table className="w-full text-[15px]">
                 <thead><tr className="border-b border-gray-200 text-left text-[13px] font-semibold text-gray-500 uppercase tracking-wider"><th className="pb-3 pt-2">Date</th><th className="pb-3 pt-2">Type</th><th className="pb-3 pt-2">Weight</th><th className="pb-3 pt-2">District</th><th className="pb-3 pt-2">Status</th><th className="pb-3 pt-2 text-right">Action</th></tr></thead>
                 <tbody className="divide-y divide-gray-100">

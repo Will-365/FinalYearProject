@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Recycle, Home, Truck, Building2, Check, Eye, EyeOff, ChevronLeft, Info, AlertTriangle } from 'lucide-react';
+import { Recycle, Home, Truck, Building2, Check, Eye, EyeOff, ChevronLeft, Info, AlertTriangle, Leaf, Recycle as RecycleIcon, Users } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { useToast } from '@/hooks/useToast';
 import { GreenCareLogo } from '@/app/components/ui/GreenCareLogo';
+import rightImg from '@/images/right.png';
 
 interface AuthPageProps {
   onLogin: (role: string) => void;
@@ -434,46 +435,11 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
 
   return (
     <div className="auth-split" style={{ height: '100vh', display: 'grid', gridTemplateColumns: '45% 55%', background: '#ffffff', overflow: 'hidden' }}>
-      {/* LEFT PANEL */}
-      <div className="auth-left" style={{ position: 'relative', background: 'linear-gradient(160deg, #0a1a0f 0%, #14532d 60%, #0d1f13 100%)',
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px 40px' }}>
+      {/* LEFT PANEL - clean full-bleed photo only */}
+      <div className="auth-left" style={{ position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0,
-          backgroundImage: 'url(https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900)',
-          backgroundSize: 'cover', backgroundPosition: 'center', mixBlendMode: 'luminosity', opacity: 0.18, zIndex: 0 }} />
-        <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <GreenCareLogo size="lg" variant="dark" showTagline />
-          </div>
-          {/* Center */}
-          <div>
-            <h1 style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', fontWeight: 800, color: '#ffffff', lineHeight: 1.2,
-              letterSpacing: '-0.025em', maxWidth: 280, marginBottom: 28 }}>
-              Turning Rwanda&apos;s waste into tomorrow&apos;s wealth.
-            </h1>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {trustBullets.map((b, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(74,222,128,0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Check style={{ width: 12, height: 12, color: '#4ade80' }} />
-                  </div>
-                  <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{b}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Testimonial */}
-          <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 10, padding: 20 }}>
-            <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, margin: 0 }}>
-              &ldquo;Neza cyane! The app made waste pickup in Kimironko so easy and I earned 3,400 RWF last month.&rdquo;
-            </p>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: 12 }}>
-              — Uwase Claudine, Resident · Gasabo District
-            </div>
-          </div>
-        </div>
+          backgroundImage: `url(${rightImg})`,
+          backgroundSize: 'cover', backgroundPosition: 'center', zIndex: 0 }} />
       </div>
 
       {/* RIGHT PANEL */}

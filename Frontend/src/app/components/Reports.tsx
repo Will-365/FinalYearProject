@@ -47,6 +47,8 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
+import { generateProfessionalPDF } from '@/utils/pdfGenerator';
+import api from '@/services/api';
 
 // Resident report data
 const residentWasteData = [
@@ -180,6 +182,7 @@ export function Reports({ userRole }: ReportsProps) {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [selectedReportType, setSelectedReportType] = useState('collection');
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   // RESIDENT REPORTS
   if (userRole === 'resident' || !userRole) {
@@ -882,6 +885,105 @@ export function Reports({ userRole }: ReportsProps) {
   }
 
   // ADMIN REPORTS
+  const handleGenerateAdminReport = async () => {
+    try {
+      setGeneratingReport(true);
+      let data = [];
+      let columns = [];
+      let rows = [];
+      let title = '';
+      
+      const params: any = {};
+      if (dateRange === 'custom' && customStartDate && customEndDate) {
+        params.startDate = customStartDate;
+        params.endDate = customEndDate;
+      } else {
+        params.period = dateRange;
+      }
+      
+      if (selectedReportType === 'collection') {
+        title = 'Collection Report';
+        const res = await api.get('/admin/collections', { params });
+        data = res.data?.data || res.data || [];
+        columns = ['ID', 'Date', 'Address', 'Status', 'Priority', 'Assigned To'];
+        rows = data.map((item: any) => [
+          item._id?.substring(0, 8) || '-',
+          new Date(item.createdAt).toLocaleDateString(),
+          item.address?.district || 'Unknown',
+          item.status || 'pending',
+          item.priority || 'normal',
+          item.assignedTo?.name || 'Unassigned'
+        ]);
+      } else if (selectedReportType === 'products') {
+        title = 'Products & Inventory Report';
+        const res = await api.get('/admin/catalog/products', { params });
+        data = res.data?.data || res.data || [];
+        columns = ['Product ID', 'Name', 'Category', 'Stock', 'Cash Price (RWF)', 'Points Cost'];
+        rows = data.map((item: any) => [
+          item._id?.substring(0, 8) || '-',
+          item.name || '-',
+          item.category || '-',
+          item.stock?.toString() || '0',
+          item.cashPrice?.toLocaleString() || '-',
+          item.pointsCost?.toString() || '-'
+        ]);
+      } else if (selectedReportType === 'wastes') {
+        title = 'Waste Intake Report';
+        const res = await api.get('/admin/waste-intake', { params });
+        data = res.data?.data || res.data || [];
+        columns = ['Intake ID', 'Date', 'Waste Type', 'Weight (kg)', 'Stage', 'Source'];
+        rows = data.map((item: any) => [
+          item._id?.substring(0, 8) || '-',
+          new Date(item.intakeDate || item.createdAt).toLocaleDateString(),
+          item.wasteType || '-',
+          item.weightKg?.toString() || '0',
+          item.stage || '-',
+          item.sector || item.district || 'Unknown'
+        ]);
+      } else if (selectedReportType === 'centers') {
+        title = 'Recycling Centers Report';
+        const res = await api.get('/recycling/centers/nearest', { params: { limit: 1000 } });
+        data = res.data?.data?.centers || res.data?.centers || [];
+        columns = ['Center Name', 'District', 'Latitude', 'Longitude', 'Hours', 'Status'];
+        rows = data.map((item: any) => [
+          item.name || '-',
+          item.district || 'Kigali',
+          item.latitude?.toFixed(4) || '-',
+          item.longitude?.toFixed(4) || '-',
+          item.hours || '-',
+          item.isActive ? 'Active' : 'Inactive'
+        ]);
+      }
+
+      if (!rows.length) {
+        toast.info('No data found for the selected period to generate a report.');
+        return;
+      }
+      
+      let periodStr = dateRange.replace('-', ' ').toUpperCase();
+      if (dateRange === 'custom') {
+        periodStr = `${customStartDate || '?'} to ${customEndDate || '?'}`;
+      } else if (dateRange === 'today') {
+        periodStr = new Date().toLocaleDateString();
+      }
+      
+      generateProfessionalPDF({
+        title,
+        period: periodStr,
+        columns,
+        rows,
+        filename: `${title.replace(/\s+/g, '_').toLowerCase()}_${new Date().getTime()}.pdf`
+      });
+      
+      toast.success('Report generated successfully!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.response?.data?.message || 'Failed to generate report.');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -901,9 +1003,9 @@ export function Reports({ userRole }: ReportsProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="collection">Collection Report</SelectItem>
-                  <SelectItem value="zone">Zone Performance Report</SelectItem>
-                  <SelectItem value="recycling">Recycling & Production Report</SelectItem>
-                  <SelectItem value="incentive">Incentive & Participation Report</SelectItem>
+                  <SelectItem value="products">Products & Inventory Report</SelectItem>
+                  <SelectItem value="wastes">Waste Intake Report</SelectItem>
+                  <SelectItem value="centers">Recycling Centers Report</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -945,9 +1047,22 @@ export function Reports({ userRole }: ReportsProps) {
               </>
             )}
 
-            <Button className="bg-green-600 hover:bg-green-700">
-              <Filter className="h-4 w-4 mr-2" />
-              Generate Report
+            <Button 
+              className="bg-green-600 hover:bg-green-700" 
+              onClick={handleGenerateAdminReport}
+              disabled={generatingReport}
+            >
+              {generatingReport ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Filter className="h-4 w-4 mr-2" />
+                  Generate Report
+                </>
+              )}
             </Button>
           </div>
         </CardContent>

@@ -10,6 +10,12 @@ import {
 import { GreenCareLogo } from '@/app/components/ui/GreenCareLogo';
 import { motion, AnimatePresence } from 'motion/react';
 
+// Local images
+import buyImg from '@/images/buy.png';
+import collectImg from '@/images/collect.png';
+import processImg from '@/images/process.png';
+import truckImg from '@/images/truck.png';
+
 interface LandingPageProps {
   onGetStarted: () => void;
   onShopClick?: () => void;
@@ -18,22 +24,22 @@ interface LandingPageProps {
 
 const heroImages = [
   {
-    url: 'https://images.unsplash.com/photo-1766849306046-5e750cc0d51a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3YXN0ZSUyMG1hbmFnZW1lbnQlMjByZWN5Y2xpbmclMjB0cnVja3xlbnwxfHx8fDE3Njg5MTA0OTN8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    url: truckImg,
     title: 'Smart Waste Collection',
     subtitle: 'Optimized routes and scheduled pickups'
   },
   {
-    url: 'https://images.unsplash.com/photo-1749805339958-4b1d0f16423d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmVlbiUyMHJlY3ljbGluZyUyMGVudmlyb25tZW50fGVufDF8fHx8MTc2ODkxMDQ5M3ww&ixlib=rb-4.1.0&q=80&w=1080',
+    url: processImg,
     title: 'Circular Economy',
     subtitle: 'Transform waste into valuable resources'
   },
   {
-    url: 'https://images.unsplash.com/photo-1758599668299-beebedfabf7b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb21tdW5pdHklMjBjbGVhbmluZyUyMHZvbHVudGVlcnN8ZW58MXx8fHwxNzY4OTEwNDk0fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    url: collectImg,
     title: 'Community Engagement',
     subtitle: 'Building a cleaner Rwanda together'
   },
   {
-    url: 'https://images.unsplash.com/photo-1593947594304-28d926c7ce06?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGNpdHklMjBncmVlbnxlbnwxfHx8fDE3Njg4MTY1NjV8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    url: buyImg,
     title: 'Sustainable Future',
     subtitle: 'Green cities for future generations'
   }

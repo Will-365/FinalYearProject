@@ -251,7 +251,7 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
       </nav>
 
       {/* Hero Section — image slider only */}
-      <section id="hero" className="relative h-[65vh] min-h-[400px] max-h-[600px] overflow-hidden" style={{ backgroundColor: '#0a1a0f' }}>
+      <section id="hero" className="relative h-[85vh] min-h-[500px] max-h-[800px] overflow-hidden" style={{ backgroundColor: '#0a1a0f' }}>
         <style>{`
           .hero-gradient-overlay {
             background: linear-gradient(to top right, rgba(10, 26, 15, 0.85), transparent);

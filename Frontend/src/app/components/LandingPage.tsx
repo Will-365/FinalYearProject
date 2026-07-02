@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import {
   Recycle,
@@ -89,13 +89,6 @@ const testimonials = [
   }
 ];
 
-const stats = [
-  { raw: 50, suffix: 'K+', label: 'Active Users' },
-  { raw: 2, suffix: 'M kg', label: 'Waste Recycled' },
-  { raw: 98, suffix: '%', label: 'Customer Satisfaction' },
-  { raw: 1200, suffix: '+', label: 'Trees Planted' }
-];
-
 export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: LandingPageProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -116,38 +109,6 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const statsRef = useRef<HTMLDivElement>(null);
-  const hasAnimatedRef = useRef(false);
-
-  useEffect(() => {
-    if (!statsRef.current) return;
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && !hasAnimatedRef.current) {
-          hasAnimatedRef.current = true;
-          const statEls = statsRef.current!.querySelectorAll('[data-stat-value]');
-          statEls.forEach((el) => {
-            const raw = parseInt(el.getAttribute('data-stat-value') || '0', 10);
-            const suffix = el.getAttribute('data-stat-suffix') || '';
-            const duration = 1500;
-            const startTime = performance.now();
-            const animate = (now: number) => {
-              const elapsed = now - startTime;
-              const progress = Math.min(elapsed / duration, 1);
-              const eased = 1 - Math.pow(1 - progress, 3);
-              const current = Math.round(eased * raw);
-              el.textContent = current.toLocaleString() + suffix;
-              if (progress < 1) requestAnimationFrame(animate);
-            };
-            requestAnimationFrame(animate);
-          });
-        }
-      });
-    }, { threshold: 0.3 });
-    if (statsRef.current) observer.observe(statsRef.current);
-    return () => observer.disconnect();
   }, []);
 
   const nextImage = () => {
@@ -289,8 +250,8 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
         </AnimatePresence>
       </nav>
 
-      {/* Hero Section */}
-      <section id="hero" className="relative h-screen overflow-hidden" style={{ backgroundColor: '#0a1a0f' }}>
+      {/* Hero Section — image slider only */}
+      <section id="hero" className="relative h-[50vh] min-h-[320px] max-h-[480px] overflow-hidden" style={{ backgroundColor: '#0a1a0f' }}>
         <style>{`
           .hero-gradient-overlay {
             background: linear-gradient(to top right, rgba(10, 26, 15, 0.85), transparent);
@@ -306,37 +267,6 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
           @keyframes hero-pulse {
             0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--gc-green-light-rgb), 0.4); }
             50% { opacity: 0.7; transform: scale(1.3); box-shadow: 0 0 0 4px rgba(var(--gc-green-light-rgb), 0); }
-          }
-          .hero-cta-primary {
-            background: var(--gc-green);
-            color: #ffffff;
-            padding: 14px 28px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 1rem;
-            border: none;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            box-shadow: 0 0 0 0 rgba(var(--gc-green-rgb),0.4);
-          }
-          .hero-cta-primary:hover {
-            background: #15803d;
-            box-shadow: 0 0 0 4px rgba(var(--gc-green-rgb),0.2);
-          }
-          .hero-cta-secondary {
-            background: transparent;
-            border: 1.5px solid rgba(255,255,255,0.4);
-            color: #ffffff;
-            padding: 14px 28px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.25s ease;
-          }
-          .hero-cta-secondary:hover {
-            border-color: #ffffff;
-            background: rgba(255,255,255,0.08);
           }
           .hero-nav-btn {
             background: rgba(255,255,255,0.08);
@@ -404,49 +334,6 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
           </AnimatePresence>
         </div>
 
-        {/* Hero Content */}
-        <div className="relative h-full flex items-center">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div className="max-w-3xl">
-              <motion.div
-                key={`content-${currentImageIndex}`}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-              >
-                <p
-                  className="mb-8"
-                  style={{
-                    color: 'rgba(255,255,255,0.72)',
-                    fontSize: '1.2rem',
-                    fontWeight: 400,
-                    maxWidth: '480px',
-                    lineHeight: 1.7
-                  }}
-                >
-                  Transform waste into valuable resources
-                </p>
-                <div className="mb-8">
-                  <button
-                    onClick={onGetStarted}
-                    className="hero-cta-primary inline-flex items-center"
-                  >
-                    Get Started Today
-                    <span style={{ marginLeft: '8px' }}>→</span>
-                  </button>
-                </div>
-                <div
-                  style={{
-                    height: '1px',
-                    background: 'rgba(255,255,255,0.08)',
-                    marginBottom: '24px'
-                  }}
-                />
-              </motion.div>
-            </div>
-          </div>
-        </div>
-
         {/* Slider Controls */}
         <div className="absolute bottom-8 left-0 right-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -475,88 +362,6 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section
-        ref={statsRef}
-        className="stats-section"
-        style={{ background: 'var(--gc-dark)', borderTop: '1px solid rgba(var(--gc-green-light-rgb), 0.15)' }}
-      >
-        <style>{`
-          .stats-section {
-            content-visibility: auto;
-            contain-intrinsic-size: auto 200px;
-          }
-          .stats-grid {
-            display: flex;
-            align-items: stretch;
-            justify-content: space-between;
-          }
-          .stats-item {
-            flex: 1;
-            text-align: center;
-            position: relative;
-            padding: 48px 0;
-          }
-          .stats-item:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 1px;
-            height: 40px;
-            background: rgba(255,255,255,0.08);
-          }
-          .stats-number {
-            font-size: clamp(2rem, 4vw, 2.75rem);
-            font-weight: 800;
-            color: #ffffff;
-            letter-spacing: -0.02em;
-            line-height: 1;
-          }
-          .stats-label {
-            font-size: 0.8rem;
-            color: rgba(255,255,255,0.5);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 500;
-            margin-top: 6px;
-          }
-          @media (max-width: 639px) {
-            .stats-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-            }
-            .stats-item {
-              padding: 32px 0;
-            }
-            .stats-item:not(:last-child)::after {
-              display: none;
-            }
-            .stats-item:nth-child(1),
-            .stats-item:nth-child(2) {
-              border-bottom: 1px solid rgba(255,255,255,0.08);
-            }
-          }
-        `}</style>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="stats-grid">
-            {stats.map((stat, index) => (
-              <div key={index} className="stats-item">
-                <div
-                  className="stats-number"
-                  data-stat-value={stat.raw}
-                  data-stat-suffix={stat.suffix}
-                >
-                  0{stat.suffix}
-                </div>
-                <div className="stats-label">{stat.label}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

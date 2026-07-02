@@ -94,107 +94,101 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     onNavigate?.('collection');
   };
 
-  const KpiSkeleton = () => <Skeleton className="h-28 rounded-2xl" />;
+  const KpiSkeleton = () => <Skeleton className="h-[88px] rounded-xl" />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-6xl mx-auto">
       <div>
-        <h2 className="text-2xl font-bold text-[#0d1f13]">Admin Dashboard</h2>
+        <h2 className="text-xl font-bold text-[#0d1f13]">Admin Dashboard</h2>
         <p className="text-gray-500 text-sm">Live operations overview</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {loadingSummary ? [1, 2, 3, 4].map((i) => <KpiSkeleton key={i} />) : (
           <>
             {/* KPI 1 */}
-            <div className="relative group rounded-[20px] p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-blue-500/20 hover:to-transparent transition-all duration-300">
-              <Card className="rounded-[20px] border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
-                <CardHeader className="pb-4 flex flex-row items-start justify-between">
-                  <div className="space-y-1 z-10">
-                    <CardTitle className="text-[13px] font-semibold text-gray-500 uppercase tracking-wider">Total Requests</CardTitle>
-                    <p className="text-[36px] font-bold text-gray-900 tracking-tight leading-none mt-2">{totalRequests}</p>
+            <div className="relative group rounded-xl p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-blue-500/20 hover:to-transparent transition-all duration-300">
+              <Card className="rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-blue-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
+                <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-start justify-between">
+                  <div className="space-y-0.5 z-10 min-w-0">
+                    <CardTitle className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider truncate">Total Requests</CardTitle>
+                    <p className="text-2xl font-bold text-gray-900 tracking-tight leading-none mt-1">{totalRequests}</p>
                   </div>
-                  <div className="p-3 bg-blue-50/80 rounded-[14px] z-10">
-                    <ClipboardList className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 bg-blue-50/80 rounded-lg z-10 shrink-0">
+                    <ClipboardList className="h-4 w-4 text-blue-600" />
                   </div>
                 </CardHeader>
-                <CardContent className="pb-5 z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-[13px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      <ArrowUpRight className="h-3 w-3" /> All time
-                    </span>
-                  </div>
+                <CardContent className="pb-3 px-4 z-10">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    <ArrowUpRight className="h-3 w-3" /> All time
+                  </span>
                 </CardContent>
               </Card>
             </div>
 
             {/* KPI 2 */}
-            <div className="relative group rounded-[20px] p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-amber-500/20 hover:to-transparent transition-all duration-300">
-              <Card className="rounded-[20px] border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-amber-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
-                <CardHeader className="pb-4 flex flex-row items-start justify-between">
-                  <div className="space-y-1 z-10">
-                    <CardTitle className="text-[13px] font-semibold text-gray-500 uppercase tracking-wider">Pending / Assigned</CardTitle>
-                    <p className="text-[36px] font-bold text-gray-900 tracking-tight leading-none mt-2">{pending}</p>
+            <div className="relative group rounded-xl p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-amber-500/20 hover:to-transparent transition-all duration-300">
+              <Card className="rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-amber-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
+                <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-start justify-between">
+                  <div className="space-y-0.5 z-10 min-w-0">
+                    <CardTitle className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider truncate">Pending / Assigned</CardTitle>
+                    <p className="text-2xl font-bold text-gray-900 tracking-tight leading-none mt-1">{pending}</p>
                   </div>
-                  <div className="p-3 bg-amber-50/80 rounded-[14px] z-10">
-                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <div className="p-2 bg-amber-50/80 rounded-lg z-10 shrink-0">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
                   </div>
                 </CardHeader>
-                <CardContent className="pb-5 z-10">
-                  <Button variant="link" className="p-0 h-auto text-[13px] text-amber-700 font-medium hover:text-amber-800" onClick={() => goCollection()}>
-                    Review pending requests →
+                <CardContent className="pb-3 px-4 z-10">
+                  <Button variant="link" className="p-0 h-auto text-xs text-amber-700 font-medium hover:text-amber-800" onClick={() => goCollection()}>
+                    Review pending →
                   </Button>
                 </CardContent>
               </Card>
             </div>
 
             {/* KPI 3 */}
-            <div className="relative group rounded-[20px] p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-emerald-500/20 hover:to-transparent transition-all duration-300">
-              <Card className="rounded-[20px] border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
-                <CardHeader className="pb-4 flex flex-row items-start justify-between">
-                  <div className="space-y-1 z-10">
-                    <CardTitle className="text-[13px] font-semibold text-gray-500 uppercase tracking-wider">Active Collectors</CardTitle>
-                    <p className="text-[36px] font-bold text-gray-900 tracking-tight leading-none mt-2">{activeCollectors}</p>
+            <div className="relative group rounded-xl p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-emerald-500/20 hover:to-transparent transition-all duration-300">
+              <Card className="rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-emerald-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
+                <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-start justify-between">
+                  <div className="space-y-0.5 z-10 min-w-0">
+                    <CardTitle className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider truncate">Active Collectors</CardTitle>
+                    <p className="text-2xl font-bold text-gray-900 tracking-tight leading-none mt-1">{activeCollectors}</p>
                   </div>
-                  <div className="p-3 bg-emerald-50/80 rounded-[14px] z-10">
-                    <Truck className="h-5 w-5 text-emerald-600" />
+                  <div className="p-2 bg-emerald-50/80 rounded-lg z-10 shrink-0">
+                    <Truck className="h-4 w-4 text-emerald-600" />
                   </div>
                 </CardHeader>
-                <CardContent className="pb-5 z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-[13px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" /> Online now
-                    </span>
-                  </div>
+                <CardContent className="pb-3 px-4 z-10">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
+                  </span>
                 </CardContent>
               </Card>
             </div>
 
             {/* KPI 4 */}
-            <div className="relative group rounded-[20px] p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-indigo-500/20 hover:to-transparent transition-all duration-300">
-              <Card className="rounded-[20px] border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
-                <CardHeader className="pb-4 flex flex-row items-start justify-between">
-                  <div className="space-y-1 z-10">
-                    <CardTitle className="text-[13px] font-semibold text-gray-500 uppercase tracking-wider">Total Waste Collected</CardTitle>
-                    <div className="flex items-baseline gap-1 mt-2">
-                      <p className="text-[36px] font-bold text-gray-900 tracking-tight leading-none">{Number(totalKg).toLocaleString()}</p>
-                      <span className="text-gray-500 font-medium">kg</span>
+            <div className="relative group rounded-xl p-[1px] bg-gradient-to-b from-transparent to-transparent hover:from-indigo-500/20 hover:to-transparent transition-all duration-300">
+              <Card className="rounded-xl border border-gray-200 shadow-sm group-hover:shadow-md transition-all bg-white h-full relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-full pointer-events-none"></div>
+                <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-start justify-between">
+                  <div className="space-y-0.5 z-10 min-w-0">
+                    <CardTitle className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider truncate">Waste Collected</CardTitle>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      <p className="text-2xl font-bold text-gray-900 tracking-tight leading-none">{Number(totalKg).toLocaleString()}</p>
+                      <span className="text-xs text-gray-500 font-medium">kg</span>
                     </div>
                   </div>
-                  <div className="p-3 bg-indigo-50/80 rounded-[14px] z-10">
-                    <Scale className="h-5 w-5 text-indigo-600" />
+                  <div className="p-2 bg-indigo-50/80 rounded-lg z-10 shrink-0">
+                    <Scale className="h-4 w-4 text-indigo-600" />
                   </div>
                 </CardHeader>
-                <CardContent className="pb-5 z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1 text-[13px] font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                      30d metrics
-                    </span>
-                  </div>
+                <CardContent className="pb-3 px-4 z-10">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                    30d metrics
+                  </span>
                 </CardContent>
               </Card>
             </div>
@@ -202,19 +196,19 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-3 gap-3">
         {(['high', 'medium', 'low'] as const).map((p) => (
-          <button key={p} type="button" onClick={() => goCollection(p)} className={`rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 shadow-sm ${p === 'high' ? 'border-red-200 bg-red-50' : p === 'medium' ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
-            <p className="text-xs font-semibold uppercase capitalize text-gray-500">{p} priority</p>
-            <p className="text-2xl font-bold mt-1">{byPriority[p] ?? 0}</p>
+          <button key={p} type="button" onClick={() => goCollection(p)} className={`rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5 shadow-sm ${p === 'high' ? 'border-red-200 bg-red-50' : p === 'medium' ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
+            <p className="text-[10px] font-semibold uppercase capitalize text-gray-500">{p} priority</p>
+            <p className="text-xl font-bold mt-0.5">{byPriority[p] ?? 0}</p>
           </button>
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <Card className="rounded-[20px] border border-gray-200 shadow-sm lg:col-span-1">
-          <CardHeader><CardTitle className="text-base font-semibold">Daily Requests (7d)</CardTitle></CardHeader>
-          <CardContent className="h-64">
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Card className="rounded-xl border border-gray-200 shadow-sm lg:col-span-1">
+          <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-semibold">Daily Requests (7d)</CardTitle></CardHeader>
+          <CardContent className="h-44 px-2 pb-3">
             {loadingSummary ? <Skeleton className="h-full rounded-[14px]" /> : (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dailyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -234,13 +228,13 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             )}
           </CardContent>
         </Card>
-        <Card className="rounded-[20px] border border-gray-200 shadow-sm lg:col-span-1">
-          <CardHeader><CardTitle className="text-base font-semibold">By Waste Type</CardTitle></CardHeader>
-          <CardContent className="h-64">
+        <Card className="rounded-xl border border-gray-200 shadow-sm lg:col-span-1">
+          <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-semibold">By Waste Type</CardTitle></CardHeader>
+          <CardContent className="h-44 px-2 pb-3">
             {loadingSummary ? <Skeleton className="h-full rounded-[14px]" /> : wasteChart.length === 0 ? <p className="text-sm text-gray-400 text-center pt-20">No data</p> : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={wasteChart} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={4}>
+                  <Pie data={wasteChart} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={58} paddingAngle={3}>
                     {wasteChart.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="transparent" />)}
                   </Pie>
                   <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }} />
@@ -250,9 +244,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             )}
           </CardContent>
         </Card>
-        <Card className="rounded-[20px] border border-gray-200 shadow-sm lg:col-span-1">
-          <CardHeader><CardTitle className="text-base font-semibold">Intake by Category</CardTitle></CardHeader>
-          <CardContent className="h-64">
+        <Card className="rounded-xl border border-gray-200 shadow-sm lg:col-span-1">
+          <CardHeader className="py-3 px-4"><CardTitle className="text-sm font-semibold">Intake by Category</CardTitle></CardHeader>
+          <CardContent className="h-44 px-2 pb-3">
             {loadingIntake ? <Skeleton className="h-full rounded-[14px]" /> : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categoryChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -260,7 +254,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
                   <Tooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }} />
-                  <Bar dataKey="weight" fill="#059669" radius={[6, 6, 0, 0]} barSize={32} />
+                  <Bar dataKey="weight" fill="#059669" radius={[4, 4, 0, 0]} barSize={24} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -268,9 +262,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         </Card>
       </div>
 
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Recent Requests</CardTitle>
+      <Card className="rounded-xl border-gray-100 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
+          <CardTitle className="text-sm font-semibold">Recent Requests</CardTitle>
           {!loadingSummary && (
             <button type="button" onClick={loadSummary} className="text-xs text-gray-500 hover:text-green-600">Retry summary</button>
           )}

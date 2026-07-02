@@ -157,7 +157,7 @@ export function CollectorFormModal({ open, onClose, collector, onSuccess }: Coll
                 {isEdit ? 'Edit Collector Profile' : 'Add New Collector'}
               </DialogTitle>
               <DialogDescription className="text-green-100 text-xs mt-0.5 m-0">
-                {isEdit ? 'Update the collector's account information below' : 'Fill in the details to create a verified collector account'}
+                {isEdit ? "Update the collector's account information below" : 'Fill in the details to create a verified collector account'}
               </DialogDescription>
             </div>
           </div>

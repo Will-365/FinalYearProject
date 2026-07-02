@@ -59,57 +59,57 @@ export function ResidentDashboard({ onNavigate }) {
   const recentActivity = stats?.recentActivity || stats?.activity || [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-5 max-w-5xl mx-auto">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">
+          <h2 className="text-xl font-bold text-slate-900">
             Welcome back{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}
           </h2>
-          <p className="text-slate-500">Your eco-impact at a glance</p>
+          <p className="text-sm text-slate-500">Your eco-impact at a glance</p>
         </div>
-        <PointsBadge points={points ?? stats?.currentPoints ?? 0} className="text-base px-4 py-2" />
+        <PointsBadge points={points ?? stats?.currentPoints ?? 0} className="text-sm px-3 py-1.5" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: 'Current Points', value: points ?? stats?.currentPoints ?? 0 },
           { label: 'Total Earned', value: stats?.totalPointsEarned ?? stats?.totalEarned ?? 0 },
           { label: 'Waste Scans', value: scans },
           { label: 'Collections', value: collections },
         ].map((item) => (
-          <div key={item.label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">{item.label}</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{item.value}</p>
+          <div key={item.label} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
+            <p className="text-[11px] font-medium text-slate-500 truncate">{item.label}</p>
+            <p className="mt-0.5 text-xl font-bold text-slate-900">{item.value}</p>
           </div>
         ))}
       </div>
 
       <div>
-        <h3 className="mb-3 font-semibold text-slate-900">Quick actions</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <h3 className="mb-2 text-sm font-semibold text-slate-900">Quick actions</h3>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map(({ id, label, icon: Icon, desc }) => (
             <button
               key={id}
               type="button"
               onClick={() => onNavigate?.(id)}
-              className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+              className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="rounded-xl bg-green-50 p-2">
-                <Icon className="h-5 w-5 text-green-600" />
+              <div className="rounded-lg bg-green-50 p-1.5 shrink-0">
+                <Icon className="h-4 w-4 text-green-600" />
               </div>
-              <div>
-                <p className="font-semibold text-slate-900">{label}</p>
-                <p className="text-xs text-slate-500">{desc}</p>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 truncate">{label}</p>
+                <p className="text-[11px] text-slate-500 truncate">{desc}</p>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900">Recent Requests</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">Recent Requests</h3>
             <button
               type="button"
               onClick={() => onNavigate?.('my-requests')}
@@ -121,20 +121,20 @@ export function ResidentDashboard({ onNavigate }) {
           {requests.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-500">No collection requests yet</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {requests.slice(0, 5).map((req) => (
-                <li key={req._id || req.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm">
-                  <span className="capitalize text-slate-700">{req.wasteType} · {req.quantity}</span>
-                  <span className="text-slate-400">{formatDateWithSlot(req.preferredDate, req.preferredTimeSlot)}</span>
+                <li key={req._id || req.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs">
+                  <span className="capitalize text-slate-700 truncate">{req.wasteType} · {req.quantity}</span>
+                  <span className="text-slate-400 shrink-0">{formatDateWithSlot(req.preferredDate, req.preferredTimeSlot)}</span>
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900">Recent Activity</h3>
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">Recent Activity</h3>
             <button
               type="button"
               onClick={() => onNavigate?.('scan')}
@@ -170,18 +170,18 @@ export function ResidentDashboard({ onNavigate }) {
       </div>
 
       {rank !== '—' && (
-        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Trophy className="h-6 w-6 text-green-600" />
+        <div className="rounded-xl border border-green-200 bg-green-50 p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Trophy className="h-5 w-5 text-green-600 shrink-0" />
             <div>
-              <p className="font-semibold text-slate-900">Global rank #{rank}</p>
-              <p className="text-sm text-slate-600">Keep scanning and collecting to climb the board</p>
+              <p className="text-sm font-semibold text-slate-900">Global rank #{rank}</p>
+              <p className="text-xs text-slate-600">Keep scanning to climb the board</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => onNavigate?.('leaderboard')}
-            className="rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+            className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 shrink-0"
           >
             View Leaderboard
           </button>

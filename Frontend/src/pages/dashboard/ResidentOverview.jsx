@@ -93,15 +93,15 @@ export function ResidentOverview({ onNavigate }) {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="text-center max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-slate-900 mb-3">GreenCare Rwanda</h1>
-        <p className="text-slate-600">
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="text-center max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">GreenCare Rwanda</h1>
+        <p className="text-sm text-slate-600">
           Smart waste management — scan, collect, earn points, and redeem rewards.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {modules.map((module) => {
           const Icon = module.icon;
           return (
@@ -109,13 +109,13 @@ export function ResidentOverview({ onNavigate }) {
               key={module.id}
               type="button"
               onClick={() => onNavigate(module.id)}
-              className="text-left rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+              className="text-left rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className={`inline-flex p-3 rounded-xl ${module.color} mb-4`}>
-                <Icon className={`h-6 w-6 ${module.iconColor}`} />
+              <div className={`inline-flex p-2 rounded-lg ${module.color} mb-3`}>
+                <Icon className={`h-5 w-5 ${module.iconColor}`} />
               </div>
-              <h3 className="font-bold text-lg text-slate-900 mb-2">{module.title}</h3>
-              <p className="text-sm text-slate-500">{module.description}</p>
+              <h3 className="font-semibold text-sm text-slate-900 mb-1">{module.title}</h3>
+              <p className="text-xs text-slate-500 line-clamp-2">{module.description}</p>
             </button>
           );
         })}

@@ -29,13 +29,13 @@ function StatCard({ icon: Icon, label, value, sub, accent = 'green' }) {
     slate: 'from-slate-600 to-slate-800',
   };
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-      <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${colors[accent]} text-white mb-3`}>
-        <Icon className="h-5 w-5" />
+    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+      <div className={`inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${colors[accent]} text-white mb-2`}>
+        <Icon className="h-4 w-4" />
       </div>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="text-sm font-medium text-slate-700">{label}</p>
-      {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+      <p className="text-xl font-bold text-slate-900">{value}</p>
+      <p className="text-xs font-medium text-slate-700">{label}</p>
+      {sub && <p className="text-[10px] text-gray-500 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -148,11 +148,11 @@ export function CollectorTasksPage() {
   const zoneLabel = [zone?.district, zone?.sector].filter(Boolean).join(' → ') || 'Zone not assigned';
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-8">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div className="space-y-5 max-w-4xl mx-auto pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <p className="text-sm text-gray-500">{todayLabel}</p>
-          <h1 className="text-2xl font-bold text-[#0d1f13]">Good day, {user?.fullName?.split(' ')[0] || 'Collector'}</h1>
+          <p className="text-xs text-gray-500">{todayLabel}</p>
+          <h1 className="text-xl font-bold text-[#0d1f13]">Good day, {user?.fullName?.split(' ')[0] || 'Collector'}</h1>
           <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
             <MapPin className="h-4 w-4 text-green-600" /> {zoneLabel}
           </p>
@@ -162,7 +162,7 @@ export function CollectorTasksPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         <StatCard icon={Truck} label="Today's pickups" value={todayTotal} sub="Scheduled for today" accent="green" />
         <StatCard icon={CheckCircle} label="Completed" value={completedToday} sub={`${Math.round(progress)}% done`} accent="blue" />
         <StatCard icon={Navigation} label="In progress" value={tab === 'assigned' ? inProgress : '—'} sub="Active now" accent="amber" />
@@ -170,7 +170,7 @@ export function CollectorTasksPage() {
       </div>
 
       {todayTotal > 0 && (
-        <div className="rounded-2xl border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 p-4">
+        <div className="rounded-xl border border-green-100 bg-gradient-to-r from-green-50 to-emerald-50 p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold text-green-800">Today&apos;s progress</span>
             <span className="text-sm font-bold text-green-700">{completedToday}/{todayTotal}</span>

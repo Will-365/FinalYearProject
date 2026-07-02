@@ -131,7 +131,7 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
     <div className="min-h-screen bg-white">
       {/* Navbar */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white shadow-md' : 'bg-transparent'
+        scrolled ? 'bg-white shadow-md' : 'bg-[#0a1a0f]'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
@@ -251,7 +251,7 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
       </nav>
 
       {/* Hero Section — image slider only */}
-      <section id="hero" className="relative h-[50vh] min-h-[320px] max-h-[480px] overflow-hidden" style={{ backgroundColor: '#0a1a0f' }}>
+      <section id="hero" className="relative mt-20 h-[50vh] min-h-[320px] max-h-[480px] overflow-hidden" style={{ backgroundColor: '#0a1a0f' }}>
         <style>{`
           .hero-gradient-overlay {
             background: linear-gradient(to top right, rgba(10, 26, 15, 0.85), transparent);

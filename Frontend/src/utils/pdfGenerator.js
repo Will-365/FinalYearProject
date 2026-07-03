@@ -102,6 +102,17 @@ export const generateProfessionalPDF = ({
       valign: 'middle',
       fontSize: 9,
     },
+    // Style the first column (#) as a narrow, muted index column
+    columnStyles: {
+      0: {
+        halign: 'center',
+        cellWidth: 12,
+        fillColor: [240, 244, 255],
+        textColor: [80, 100, 160],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+    },
     alternateRowStyles: {
       fillColor: [248, 249, 250],
     },

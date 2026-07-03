@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { productService } from '@/services/productService';
-import { Search, Star, ShoppingCart, Leaf, CheckCircle2, ChevronDown, Check, X, CreditCard, Banknote, MapPin, Phone, User } from 'lucide-react';
+import { Search, Star, ShoppingCart, Leaf, CheckCircle2, ChevronDown, Check, X, CreditCard, Banknote, MapPin, Phone, User, Trash2, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Input } from '@/app/components/ui/input';
@@ -36,13 +36,50 @@ export function ProductShop({ onNavigate }) {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(null);
 
-  // Purchase State
+  // Cart & Purchase State
+  const [cart, setCart] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [pointsToUse, setPointsToUse] = useState('');
+  const [showGuestSignPrompt, setShowGuestSignPrompt] = useState(false);
+  
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [quantity, setQuantity] = useState(1);
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+
+  const addToCart = (product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product._id === (product._id || product.id));
+      if (existing) {
+        if (existing.quantity >= product.stock) {
+          toast.error('Cannot add more than available stock');
+          return prev;
+        }
+        toast.success(`Increased ${product.name} quantity in cart`);
+        return prev.map(item => item.product._id === (product._id || product.id) ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      toast.success(`${product.name} added to cart`);
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const updateCartQty = (productId, delta) => {
+    setCart(prev => prev.map(item => {
+      if ((item.product._id || item.product.id) === productId) {
+        const newQty = Math.max(1, Math.min(item.product.stock, item.quantity + delta));
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }));
+  };
+
+  const removeFromCart = (productId) => {
+    setCart(prev => prev.filter(item => (item.product._id || item.product.id) !== productId));
+  };
+
+  const cartTotalCash = cart.reduce((sum, item) => sum + ((item.product.cashPrice || 0) * item.quantity), 0);
+  const cartTotalPoints = cart.reduce((sum, item) => sum + ((item.product.pointsCost || 0) * item.quantity), 0);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -74,41 +111,79 @@ export function ProductShop({ onNavigate }) {
 
   const handlePurchase = async (e) => {
     e.preventDefault();
-    if (!selectedProduct) return;
+    if (cart.length === 0) return;
     if (!paymentMethod) { toast.error('Select a payment method'); return; }
     
-    // Guest validation
     if (!user && (!guestName || !guestPhone)) {
       toast.error('Please provide your name and phone number');
       return;
     }
 
+    if (paymentMethod === 'split' && !pointsToUse) {
+      toast.error('Enter points to use for split payment');
+      return;
+    }
+
     setPurchaseLoading(true);
     try {
-      const body = {
-        paymentMethod,
-        quantity,
-        deliveryAddress: deliveryAddress || undefined,
-        buyerName: !user ? guestName : undefined,
-        buyerPhone: !user ? guestPhone : undefined,
-      };
-      const res = await productService.buy(selectedProduct._id || selectedProduct.id, body);
+      let remainingPointsToUse = parseInt(pointsToUse) || 0;
+      let totalPtsDeducted = 0;
+      let totalCashSpent = 0;
+
+      // Distribute points logic over cart items for Promise.all
+      const buyPromises = cart.map(item => {
+        const product = item.product;
+        const maxPointsNeeded = product.pointsCost * item.quantity;
+        
+        let itemPointsToUse = 0;
+        if (paymentMethod === 'split') {
+           itemPointsToUse = Math.min(remainingPointsToUse, maxPointsNeeded);
+           remainingPointsToUse -= itemPointsToUse;
+        }
+
+        const body = {
+          paymentMethod,
+          quantity: item.quantity,
+          pointsToUse: itemPointsToUse,
+          deliveryAddress: deliveryAddress || undefined,
+          buyerName: !user ? guestName : undefined,
+          buyerPhone: !user ? guestPhone : undefined,
+        };
+
+        return productService.buy(product._id || product.id, body).then(res => {
+           if (paymentMethod === 'points') totalPtsDeducted += maxPointsNeeded;
+           if (paymentMethod === 'split') {
+              totalPtsDeducted += itemPointsToUse;
+              const ratio = 1 - (itemPointsToUse / maxPointsNeeded);
+              totalCashSpent += Math.ceil(product.cashPrice * item.quantity * ratio);
+           }
+           if (paymentMethod === 'cash' || paymentMethod === 'mobile_money') {
+              totalCashSpent += product.cashPrice * item.quantity;
+           }
+           return res;
+        });
+      });
+
+      await Promise.all(buyPromises);
       
-      if (paymentMethod === 'points' && user?.role === 'resident') {
-        const totalPts = (selectedProduct.pointsCost || 0) * quantity;
-        updatePoints(points - totalPts);
+      if ((paymentMethod === 'points' || paymentMethod === 'split') && user?.role === 'resident') {
+        updatePoints(points - totalPtsDeducted);
       }
       
       setPurchaseModalOpen(false);
-      setOrderConfirmed({ ...res, product: selectedProduct });
+      setOrderConfirmed(true);
+      setCart([]);
+      
       if (paymentMethod === 'points') {
-        toast.success(`Order confirmed using ${selectedProduct.pointsCost * quantity} points.`);
+        toast.success(`Order confirmed using ${totalPtsDeducted} points.`);
+      } else if (paymentMethod === 'split') {
+        toast.success(`Order placed! Used ${totalPtsDeducted} pts & ${totalCashSpent} RWF.`);
       } else {
-        toast.success(`Order placed! Pay ${selectedProduct.cashPrice * quantity} RWF on delivery.`);
+        toast.success(`Order placed! Pay ${totalCashSpent} RWF.`);
       }
       fetchProducts();
     } catch (err) {
-      toast.error(err.message || 'Purchase failed');
+      toast.error(err.message || 'One or more items failed to checkout. Please check your balance/stock.');
     } finally {
       setPurchaseLoading(false);
     }
@@ -155,6 +230,12 @@ export function ProductShop({ onNavigate }) {
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-6 flex items-center gap-2">
             <Leaf className="w-6 h-6 text-green-300" /> GreenCare Eco Shop
           </h1>
+          <div className="flex gap-4 w-full max-w-3xl justify-end mb-4 md:absolute md:top-8 md:right-8">
+            <button onClick={() => setCartOpen(true)} className="relative bg-white hover:bg-gray-50 text-green-800 p-2.5 rounded-full shadow-md transition-colors flex items-center gap-2 font-bold">
+              <ShoppingCart className="w-5 h-5" />
+              {cart.length > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{cart.reduce((a,b)=>a+b.quantity,0)}</span>}
+            </button>
+          </div>
           <div className="w-full relative flex items-center bg-white rounded-full p-1.5 shadow-lg max-w-3xl focus-within:ring-4 focus-within:ring-green-500/30 transition-all">
             <div className="hidden md:block w-48 border-r border-gray-200 pr-2">
               <Select value={category} onValueChange={setCategory}>
@@ -355,11 +436,9 @@ export function ProductShop({ onNavigate }) {
                     <div className="mt-auto pt-5">
                       {product.stock > 0 ? (
                         <button 
-                          onClick={() => {
-                            setSelectedProduct(product);
-                            setQuantity(1);
-                            setPaymentMethod('');
-                            setPurchaseModalOpen(true);
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(product);
                           }}
                           className="w-full py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white text-sm font-bold shadow-md shadow-green-500/20 transition-all flex items-center justify-center gap-2 group-hover:shadow-green-500/40"
                         >
@@ -455,14 +534,14 @@ export function ProductShop({ onNavigate }) {
                   <Button 
                     className="w-full h-14 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-lg shadow-green-600/20 transition-all flex items-center justify-center gap-3"
                     onClick={() => {
-                      setQuantity(1);
-                      setPaymentMethod('');
-                      setPurchaseModalOpen(true);
+                      addToCart(selectedProduct);
+                      setSelectedProduct(null);
+                      setCartOpen(true);
                     }}
                     disabled={selectedProduct.stock === 0}
                   >
                     <ShoppingCart className="w-6 h-6" />
-                    {selectedProduct.stock === 0 ? 'Out of Stock' : 'Proceed to Checkout'}
+                    {selectedProduct.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                   </Button>
                 </div>
               </div>
@@ -471,127 +550,228 @@ export function ProductShop({ onNavigate }) {
         </DialogContent>
       </Dialog>
 
+      {/* Cart Sidebar — custom slide-over (not Dialog, to avoid layout conflicts) */}
+      {cartOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50" onClick={() => setCartOpen(false)} />
+          
+          {/* Panel */}
+          <div className="relative z-10 w-full max-w-md bg-gray-50 h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="bg-white px-5 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
+              <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900">
+                <ShoppingCart className="w-5 h-5 text-green-600"/> Your Cart
+                {cart.length > 0 && (
+                  <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {cart.reduce((a,b) => a+b.quantity, 0)} items
+                  </span>
+                )}
+              </h2>
+              <button onClick={() => setCartOpen(false)} className="p-2 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-full transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Items */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {cart.length === 0 ? (
+                <div className="text-center py-16 flex flex-col items-center">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <ShoppingCart className="w-10 h-10 text-gray-300"/>
+                  </div>
+                  <p className="text-gray-600 font-semibold text-lg">Your cart is empty</p>
+                  <p className="text-gray-400 text-sm mt-1">Add some eco-friendly products!</p>
+                  <Button onClick={() => setCartOpen(false)} variant="outline" className="mt-6 rounded-full border-green-300 text-green-700">
+                    Continue Shopping
+                  </Button>
+                </div>
+              ) : (
+                cart.map((item, idx) => (
+                  <div key={idx} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex gap-4">
+                    <div className="w-20 h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden p-2">
+                      <img
+                        src={item.product.imageUrl || '/placeholder-product.svg'}
+                        alt={item.product.name}
+                        className="w-full h-full object-contain"
+                        onError={e => e.currentTarget.src = '/placeholder-product.svg'}
+                      />
+                    </div>
+                    <div className="flex-1 flex flex-col min-w-0">
+                      <h4 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{item.product.name}</h4>
+                      <p className="text-green-600 font-black text-base mt-1">RWF {item.product.cashPrice?.toLocaleString()}</p>
+                      <div className="mt-auto flex items-center gap-3 pt-2">
+                        <div className="flex items-center bg-gray-50 rounded-lg border border-gray-200 h-8 shrink-0">
+                          <button
+                            onClick={() => updateCartQty(item.product._id || item.product.id, -1)}
+                            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-l-lg transition-colors"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="text-sm font-bold w-8 text-center">{item.quantity}</span>
+                          <button
+                            onClick={() => updateCartQty(item.product._id || item.product.id, 1)}
+                            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-r-lg transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => removeFromCart(item.product._id || item.product.id)}
+                          className="ml-auto text-xs text-red-400 hover:text-red-600 flex items-center gap-1 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3"/> Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            {/* Footer */}
+            {cart.length > 0 && (
+              <div className="bg-white p-5 border-t border-gray-200 shrink-0 space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500">Items</span>
+                  <span className="font-semibold text-gray-800">{cart.reduce((a,b) => a+b.quantity, 0)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-900 text-lg">Total</span>
+                  <span className="text-2xl font-black text-green-700">RWF {cartTotalCash.toLocaleString()}</span>
+                </div>
+                <Button
+                  onClick={() => { setCartOpen(false); setPaymentMethod(''); setPurchaseModalOpen(true); }}
+                  className="w-full h-13 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-lg shadow-green-200 text-base py-3"
+                >
+                  Proceed to Checkout →
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Guest Sign up prompt */}
+      <Dialog open={showGuestSignPrompt} onOpenChange={setShowGuestSignPrompt}>
+        <DialogContent aria-describedby={undefined} className="max-w-sm text-center p-8 bg-white rounded-3xl border-0 shadow-2xl">
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><User className="w-8 h-8"/></div>
+          <DialogTitle className="text-2xl font-black text-gray-900 mb-2">Create an Account</DialogTitle>
+          <DialogDescription className="text-gray-500 mb-6">Green Points are exclusively for registered GreenCare community members. Sign up today to start earning points for your recycling!</DialogDescription>
+          <div className="space-y-3">
+            <Button onClick={() => { setShowGuestSignPrompt(false); setPurchaseModalOpen(false); onNavigate?.('login'); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-11">Sign Up / Log In</Button>
+            <Button onClick={() => setShowGuestSignPrompt(false)} variant="outline" className="w-full rounded-xl h-11">Continue as Guest</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Purchase Modal */}
       <Dialog open={purchaseModalOpen} onOpenChange={setPurchaseModalOpen}>
-        <DialogContent aria-describedby={undefined} className="max-w-md bg-white p-0 rounded-2xl overflow-hidden shadow-2xl border-0">
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 text-white text-center">
+        <DialogContent aria-describedby={undefined} className="max-w-md bg-white p-0 rounded-2xl overflow-y-auto max-h-[90vh] shadow-2xl border-0">
+          <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-6 text-white text-center sticky top-0 z-10">
             <DialogTitle className="text-2xl font-bold">Checkout</DialogTitle>
             <DialogDescription className="text-gray-300 mt-1">Complete your eco-friendly purchase</DialogDescription>
           </div>
           
-          {selectedProduct && (
-            <form onSubmit={handlePurchase} className="p-6 space-y-6">
-              
-              {/* Item Summary */}
-              <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <img src={selectedProduct.imageUrl} className="w-16 h-16 object-contain bg-white border border-gray-200 rounded-lg p-1" />
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 text-sm line-clamp-1">{selectedProduct.name}</h3>
-                  <div className="text-green-700 font-black mt-0.5">RWF {selectedProduct.cashPrice?.toLocaleString()}</div>
-                </div>
-                <div className="flex flex-col items-center bg-white border border-gray-200 rounded-lg p-1">
-                  <button type="button" onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))} className="h-6 w-8 flex items-center justify-center text-gray-500 hover:text-green-600 hover:bg-green-50 rounded">+</button>
-                  <span className="text-xs font-bold w-full text-center py-1 bg-gray-50">{quantity}</span>
-                  <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="h-6 w-8 flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 rounded">-</button>
-                </div>
-              </div>
+          <form onSubmit={handlePurchase} className="p-6 space-y-6">
+            {/* Payment Method */}
+            <div>
+              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-green-600"/> Payment Method</h3>
+              <div className="space-y-2.5">
+                
+                {/* Points Option - Visible to all, but restricted */}
+                <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'points' ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-1 ring-emerald-500' : 'border-gray-200 hover:border-emerald-300'}`}>
+                  <input type="radio" name="payment" value="points" checked={paymentMethod === 'points'} onChange={() => { if(!user){ setShowGuestSignPrompt(true); return; } setPaymentMethod('points'); }} className="mt-1" disabled={user?.role === 'resident' && points < cartTotalPoints} />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className={`font-bold ${paymentMethod === 'points' ? 'text-emerald-900' : 'text-gray-700'}`}>Pay with Green Points</span>
+                      <Leaf className={`w-4 h-4 ${paymentMethod === 'points' ? 'text-emerald-600' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="text-sm text-emerald-700 font-medium mt-1">Cost: {cartTotalPoints} pts</div>
+                    {user?.role === 'resident' && <div className="text-xs text-gray-500 mt-1">Your balance: {points} pts</div>}
+                    {!user && <div className="text-xs text-amber-600 mt-1">Sign in to use points</div>}
+                  </div>
+                </label>
 
-              {/* Payment Method */}
-              <div>
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-green-600"/> Payment Method</h3>
-                <div className="space-y-2.5">
-                  {user?.role === 'resident' && selectedProduct.pointsCost > 0 && (
-                    <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'points' ? 'bg-emerald-50 border-emerald-500 shadow-sm ring-1 ring-emerald-500' : 'border-gray-200 hover:border-emerald-300'}`}>
-                      <input type="radio" name="payment" value="points" checked={paymentMethod === 'points'} onChange={() => setPaymentMethod('points')} className="mt-1" disabled={points < selectedProduct.pointsCost * quantity} />
+                {/* Split Pay Option */}
+                {user?.role === 'resident' && points > 0 && cartTotalCash > 0 && cartTotalPoints > 0 && (
+                  <label className={`flex flex-col gap-2 p-3.5 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'split' ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-1 ring-indigo-500' : 'border-gray-200 hover:border-indigo-300'}`}>
+                    <div className="flex items-start gap-3">
+                      <input type="radio" name="payment" value="split" checked={paymentMethod === 'split'} onChange={() => setPaymentMethod('split')} className="mt-1" />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className={`font-bold ${paymentMethod === 'points' ? 'text-emerald-900' : 'text-gray-700'}`}>Green Points</span>
-                          <Leaf className={`w-4 h-4 ${paymentMethod === 'points' ? 'text-emerald-600' : 'text-gray-400'}`} />
+                          <span className={`font-bold ${paymentMethod === 'split' ? 'text-indigo-900' : 'text-gray-700'}`}>Split Pay (Points + Cash)</span>
+                          <Banknote className={`w-4 h-4 ${paymentMethod === 'split' ? 'text-indigo-600' : 'text-gray-400'}`} />
                         </div>
-                        <div className="text-sm text-emerald-700 font-medium mt-1">Cost: {selectedProduct.pointsCost * quantity} pts</div>
-                        <div className="text-xs text-gray-500 mt-1">Your balance: {points} pts</div>
+                        <div className="text-xs text-gray-500 mt-1">Use points to get a discount</div>
                       </div>
-                    </label>
-                  )}
-
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'mobile_money' ? 'bg-green-50 border-green-500 shadow-sm ring-1 ring-green-500' : 'border-gray-200 hover:border-green-300'}`}>
-                    <input type="radio" name="payment" value="mobile_money" checked={paymentMethod === 'mobile_money'} onChange={() => setPaymentMethod('mobile_money')} className="mt-1" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className={`font-bold ${paymentMethod === 'mobile_money' ? 'text-green-900' : 'text-gray-700'}`}>Mobile Money</span>
-                        <Phone className={`w-4 h-4 ${paymentMethod === 'mobile_money' ? 'text-green-600' : 'text-gray-400'}`} />
-                      </div>
-                      <div className="text-sm font-medium mt-1 text-green-700">Total: RWF {(selectedProduct.cashPrice * quantity).toLocaleString()}</div>
                     </div>
-                  </label>
-
-                  <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'cash' ? 'bg-green-50 border-green-500 shadow-sm ring-1 ring-green-500' : 'border-gray-200 hover:border-green-300'}`}>
-                    <input type="radio" name="payment" value="cash" checked={paymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} className="mt-1" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className={`font-bold ${paymentMethod === 'cash' ? 'text-green-900' : 'text-gray-700'}`}>Pay on Delivery</span>
-                        <Banknote className={`w-4 h-4 ${paymentMethod === 'cash' ? 'text-green-600' : 'text-gray-400'}`} />
+                    {paymentMethod === 'split' && (
+                      <div className="mt-2 pl-7 flex items-center gap-2">
+                        <Input type="number" max={Math.min(points, cartTotalPoints)} min={1} placeholder="Pts to use" value={pointsToUse} onChange={(e) => setPointsToUse(e.target.value)} className="h-9 w-28 bg-white text-sm border-indigo-200 focus:ring-indigo-500" />
+                        <span className="text-xs font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded">/ {Math.min(points, cartTotalPoints)} max</span>
                       </div>
-                      <div className="text-sm font-medium mt-1 text-green-700">Total: RWF {(selectedProduct.cashPrice * quantity).toLocaleString()}</div>
-                    </div>
+                    )}
                   </label>
-                </div>
-              </div>
+                )}
 
-              {/* Delivery Info */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2"><MapPin className="w-4 h-4 text-green-600"/> Delivery Details</h3>
-                
-                {!user && (
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <Input placeholder="Your Name" value={guestName} onChange={e => setGuestName(e.target.value)} required className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:ring-green-500 focus:border-green-500" />
-                    <Input type="tel" placeholder="Phone Number" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} required className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:ring-green-500 focus:border-green-500" />
+                <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'mobile_money' ? 'bg-green-50 border-green-500 shadow-sm ring-1 ring-green-500' : 'border-gray-200 hover:border-green-300'}`}>
+                  <input type="radio" name="payment" value="mobile_money" checked={paymentMethod === 'mobile_money'} onChange={() => setPaymentMethod('mobile_money')} className="mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className={`font-bold ${paymentMethod === 'mobile_money' ? 'text-green-900' : 'text-gray-700'}`}>Mobile Money</span>
+                      <Phone className={`w-4 h-4 ${paymentMethod === 'mobile_money' ? 'text-green-600' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="text-sm font-medium mt-1 text-green-700">Total: RWF {cartTotalCash.toLocaleString()}</div>
                   </div>
-                )}
-                
-                {(paymentMethod === 'cash' || paymentMethod === 'mobile_money') && (
-                  <Input placeholder="Shipping Address (e.g., Gasabo, Kigali)" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} required className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:ring-green-500 focus:border-green-500" />
-                )}
-              </div>
+                </label>
 
-              {/* Submit */}
-              <div className="pt-2">
-                <Button type="submit" disabled={purchaseLoading} className="w-full h-12 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-lg shadow-green-200 transition-all">
-                  {purchaseLoading ? 'Processing Order...' : `Confirm Order • ${paymentMethod === 'points' ? (selectedProduct.pointsCost * quantity) + ' pts' : 'RWF ' + (selectedProduct.cashPrice * quantity).toLocaleString()}`}
-                </Button>
+                <label className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-all ${paymentMethod === 'cash' ? 'bg-green-50 border-green-500 shadow-sm ring-1 ring-green-500' : 'border-gray-200 hover:border-green-300'}`}>
+                  <input type="radio" name="payment" value="cash" checked={paymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} className="mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className={`font-bold ${paymentMethod === 'cash' ? 'text-green-900' : 'text-gray-700'}`}>Pay on Delivery</span>
+                      <Banknote className={`w-4 h-4 ${paymentMethod === 'cash' ? 'text-green-600' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="text-sm font-medium mt-1 text-green-700">Total: RWF {cartTotalCash.toLocaleString()}</div>
+                  </div>
+                </label>
               </div>
-            </form>
-          )}
+            </div>
+
+            {/* Delivery Info */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2"><MapPin className="w-4 h-4 text-green-600"/> Delivery Details</h3>
+              
+              {!user && (
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <Input placeholder="Your Name" value={guestName} onChange={e => setGuestName(e.target.value)} required className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:ring-green-500 focus:border-green-500" />
+                  <Input type="tel" placeholder="Phone Number" value={guestPhone} onChange={e => setGuestPhone(e.target.value)} required className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:ring-green-500 focus:border-green-500" />
+                </div>
+              )}
+              
+              <Input placeholder="Shipping Address (e.g., Gasabo, Kigali)" value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)} required className="h-11 rounded-xl bg-gray-50 border-gray-200 focus:bg-white focus:ring-green-500 focus:border-green-500" />
+            </div>
+
+            {/* Submit */}
+            <div className="pt-2">
+              <Button type="submit" disabled={purchaseLoading} className="w-full h-14 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-lg shadow-green-200 transition-all">
+                {purchaseLoading ? 'Processing Order...' : `Confirm Checkout`}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
       {/* Confirmation Modal */}
-      <Dialog open={!!orderConfirmed} onOpenChange={() => { setOrderConfirmed(null); setSelectedProduct(null); }}>
+      <Dialog open={!!orderConfirmed} onOpenChange={() => setOrderConfirmed(null)}>
         <DialogContent aria-describedby={undefined} className="max-w-md bg-white p-8 rounded-3xl text-center border-0 shadow-2xl">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="h-10 w-10 text-green-600" />
           </div>
           <h2 className="text-3xl font-black text-gray-900 mb-3">Order Confirmed!</h2>
           <p className="text-gray-500 mb-8">Thank you for supporting sustainable products. A confirmation will be sent to your phone/email shortly.</p>
-          
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 mb-8 text-left">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Order Details</h4>
-            <div className="flex items-center gap-3 mb-4">
-              <img src={orderConfirmed?.product?.imageUrl || '/placeholder-product.svg'} className="w-12 h-12 rounded-lg object-contain bg-white border border-gray-200 p-1" />
-              <div>
-                <p className="text-sm font-bold text-gray-900 line-clamp-1">{orderConfirmed?.product?.name}</p>
-                <p className="text-xs text-gray-500">Qty: {quantity}</p>
-              </div>
-            </div>
-            <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-              <span className="text-sm font-semibold text-gray-600">Total Paid</span>
-              <span className="text-lg font-black text-green-700">
-                {paymentMethod === 'points' ? (orderConfirmed?.product?.pointsCost * quantity + ' pts') : ('RWF ' + (orderConfirmed?.product?.cashPrice * quantity).toLocaleString())}
-              </span>
-            </div>
-          </div>
-
-          <Button onClick={() => { setOrderConfirmed(null); setSelectedProduct(null); }} className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold">
+          <Button onClick={() => setOrderConfirmed(null)} className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold">
             Continue Shopping
           </Button>
         </DialogContent>

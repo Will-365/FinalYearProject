@@ -98,11 +98,11 @@ export const getProductById = async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const buyProduct = async (req, res, next) => {
   try {
-    const { paymentMethod, quantity = 1, deliveryNote, mobileMoneyPhone, deliveryAddress } = req.body;
-    const allowed = ['points', 'mobile_money', 'cash'];
+    const { paymentMethod, quantity = 1, pointsToUse = 0, deliveryNote, mobileMoneyPhone, deliveryAddress } = req.body;
+    const allowed = ['points', 'mobile_money', 'cash', 'split'];
 
     if (!allowed.includes(paymentMethod)) {
-      return res.status(400).json({ success: false, message: 'paymentMethod must be points, mobile_money, or cash' });
+      return res.status(400).json({ success: false, message: 'paymentMethod must be points, mobile_money, cash, or split' });
     }
 
     const product = await Product.findById(req.params.id);
@@ -122,11 +122,11 @@ export const buyProduct = async (req, res, next) => {
     const isBuyer    = req.user?.role === 'buyer';
     const isResident = req.user?.role === 'resident';
 
-    if (paymentMethod === 'points' && !isResident) {
-      return res.status(403).json({ success: false, message: 'Only residents can pay with points' });
+    if ((paymentMethod === 'points' || paymentMethod === 'split') && !isResident) {
+      return res.status(403).json({ success: false, message: 'Only residents can use points' });
     }
-    if (paymentMethod === 'mobile_money' && !mobileMoneyPhone) {
-      return res.status(400).json({ success: false, message: 'mobileMoneyPhone is required for mobile money payment' });
+    if ((paymentMethod === 'mobile_money' || paymentMethod === 'split') && !mobileMoneyPhone && paymentMethod !== 'split') {
+       // Note: if split and they want to pay remainder in cash, we don't strictly need mobileMoneyPhone. We'll check later if needed.
     }
 
     // ── Points deduction (resident only) ─────────────────────
@@ -134,26 +134,37 @@ export const buyProduct = async (req, res, next) => {
     let cashAmount = 0;
     let residualPoints = null;
 
-    if (paymentMethod === 'points') {
+    if (paymentMethod === 'points' || paymentMethod === 'split') {
       const user = await User.findById(req.user.id);
-      const needed = product.pointsCost * qty;
-      if (user.points < needed) {
+      const maxPointsNeeded = product.pointsCost * qty;
+      
+      const needed = paymentMethod === 'split' ? Math.min(parseInt(pointsToUse) || 0, maxPointsNeeded, user.points) : maxPointsNeeded;
+      
+      if (paymentMethod === 'points' && user.points < needed) {
         return res.status(400).json({
           success: false,
           message: `Insufficient points. Need ${needed}, you have ${user.points}`,
         });
       }
-      user.points -= needed;
-      await user.save();
-      await PointsLedger.create({
-        user:        user._id,
-        points:      -needed,
-        type:        'spent',
-        source:      'product_purchase',
-        description: `Purchased "${product.name}" x${qty}`,
-      });
-      pointsUsed    = needed;
-      residualPoints = user.points;
+      
+      if (needed > 0) {
+        user.points -= needed;
+        await user.save();
+        await PointsLedger.create({
+          user:        user._id,
+          points:      -needed,
+          type:        'spent',
+          source:      'product_purchase',
+          description: `Used points for "${product.name}" x${qty}`,
+        });
+        pointsUsed    = needed;
+        residualPoints = user.points;
+      }
+      
+      if (paymentMethod === 'split') {
+        const remainingRatio = 1 - (pointsUsed / maxPointsNeeded);
+        cashAmount = Math.ceil(product.cashPrice * qty * remainingRatio);
+      }
     } else {
       cashAmount = (paymentMethod === 'mobile_money' ? product.phonePrice : product.cashPrice) * qty || product.cashPrice * qty;
     }

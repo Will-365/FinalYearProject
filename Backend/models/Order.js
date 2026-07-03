@@ -21,7 +21,7 @@ const orderSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ['points', 'mobile_money', 'cash'],
+      enum: ['points', 'mobile_money', 'cash', 'split'],
       required: true,
     },
     pointsUsed:  { type: Number, default: 0 },

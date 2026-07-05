@@ -262,49 +262,102 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         </Card>
       </div>
 
-      <Card className="rounded-xl border-gray-100 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
-          <CardTitle className="text-sm font-semibold">Recent Requests</CardTitle>
+      <Card className="rounded-[20px] border border-gray-200 shadow-sm overflow-hidden">
+        <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4 flex flex-row items-center justify-between px-5">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-50 rounded-xl">
+              <ClipboardList className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-gray-900">Recent Requests</CardTitle>
+              <p className="text-xs text-gray-500 mt-0.5">Latest collection requests from residents</p>
+            </div>
+          </div>
           {!loadingSummary && (
-            <button type="button" onClick={loadSummary} className="text-xs text-gray-500 hover:text-green-600">Retry summary</button>
+            <Button variant="outline" size="sm" onClick={loadSummary} className="text-xs h-8 text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-900 shadow-none font-medium">
+              Refresh
+            </Button>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {loadingRecent ? (
-            <div className="space-y-2">{[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}</div>
+            <div className="p-5 space-y-3">{[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}</div>
           ) : recent.length === 0 ? (
-            <p className="text-center py-8 text-gray-500 text-sm">No recent requests</p>
+            <div className="py-16 text-center">
+              <div className="h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-gray-100">
+                <ClipboardList className="h-6 w-6 text-gray-300" />
+              </div>
+              <p className="font-semibold text-gray-900">No recent requests</p>
+              <p className="text-sm text-gray-500 mt-1">When residents request pickups, they will appear here.</p>
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[15px] hidden md:table">
-                <thead><tr className="border-b border-gray-200 text-left text-[13px] font-semibold text-gray-500 uppercase tracking-wider"><th className="pb-3 pt-2">Resident</th><th className="pb-3 pt-2">Type</th><th className="pb-3 pt-2">Priority</th><th className="pb-3 pt-2">Status</th><th className="pb-3 pt-2">Date</th><th className="pb-3 pt-2 text-right">Action</th></tr></thead>
-                <tbody className="divide-y divide-gray-100">
+            <div className="overflow-visible w-full custom-scrollbar" style={{overflowX: 'auto'}}>
+              <table className="w-full text-sm hidden md:table">
+                <thead>
+                  <tr className="bg-gray-50/80 border-b border-gray-100 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="py-3 px-5 font-semibold">Resident</th>
+                    <th className="py-3 px-5 font-semibold">Type</th>
+                    <th className="py-3 px-5 font-semibold">Priority</th>
+                    <th className="py-3 px-5 font-semibold">Status</th>
+                    <th className="py-3 px-5 font-semibold">Date</th>
+                    <th className="py-3 px-5 font-semibold text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
                   {recent.map((r) => (
                     <tr key={r._id || r.id} className="group hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3 font-medium text-gray-900">{r.resident?.fullName || r.residentName || '—'}</td>
-                      <td><Badge className={wasteBadgeClass(r.wasteType)}>{r.wasteType}</Badge></td>
-                      <td><Badge className={priorityBadgeClass(r.priority || 'medium')}>{r.priority || 'medium'}</Badge></td>
-                      <td><Badge className={statusBadgeClass(r.status)}>{r.status?.replace('_', ' ')}</Badge></td>
-                      <td className="text-gray-500">{formatAdminDate(r.preferredDate, r.preferredTimeSlot)}</td>
-                      <td className="py-3 text-right">
-                        {['pending', 'assigned'].includes(r.status) && (
-                          <Button size="sm" variant="outline" className="text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAssignId(r._id || r.id)}>Assign</Button>
+                      <td className="py-4 px-5">
+                        <span className="font-bold text-gray-900">{r.resident?.fullName || r.residentName || '—'}</span>
+                      </td>
+                      <td className="py-4 px-5">
+                        <Badge variant="outline" className={`${wasteBadgeClass(r.wasteType)} shadow-none font-bold capitalize`}>
+                          {r.wasteType}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-5">
+                        <Badge variant="outline" className={`${priorityBadgeClass(r.priority || 'medium')} shadow-none font-bold capitalize`}>
+                          {r.priority || 'medium'}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-5">
+                        <Badge className={`${statusBadgeClass(r.status)} shadow-none font-bold capitalize border-0`}>
+                          {r.status?.replace('_', ' ')}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-5 text-gray-500 font-medium">
+                        {formatAdminDate(r.preferredDate, r.preferredTimeSlot)}
+                      </td>
+                      <td className="py-4 px-5 text-right">
+                        {['pending', 'assigned'].includes(r.status) ? (
+                          <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 font-semibold shadow-none opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAssignId(r._id || r.id)}>
+                            Assign
+                          </Button>
+                        ) : (
+                          <span className="text-gray-300">—</span>
                         )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div className="md:hidden space-y-3">
+              <div className="md:hidden divide-y divide-gray-50">
                 {recent.map((r) => (
-                  <div key={r._id || r.id} className="rounded-xl border border-gray-100 p-3">
-                    <p className="font-semibold">{r.resident?.fullName || 'Resident'}</p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      <Badge className={wasteBadgeClass(r.wasteType)}>{r.wasteType}</Badge>
-                      <Badge className={statusBadgeClass(r.status)}>{r.status}</Badge>
+                  <div key={r._id || r.id} className="p-4 hover:bg-gray-50/50 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-bold text-gray-900">{r.resident?.fullName || 'Resident'}</p>
+                      <Badge className={`${statusBadgeClass(r.status)} shadow-none font-bold capitalize border-0`}>{r.status}</Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="outline" className={`${wasteBadgeClass(r.wasteType)} shadow-none font-bold capitalize`}>{r.wasteType}</Badge>
+                      <Badge variant="outline" className={`${priorityBadgeClass(r.priority || 'medium')} shadow-none font-bold capitalize`}>{r.priority || 'medium'}</Badge>
+                    </div>
+                    <div className="mt-3 text-sm text-gray-500 font-medium">
+                      {formatAdminDate(r.preferredDate, r.preferredTimeSlot)}
                     </div>
                     {['pending', 'assigned'].includes(r.status) && (
-                      <Button size="sm" className="mt-2 w-full bg-green-600" onClick={() => setAssignId(r._id || r.id)}>Assign</Button>
+                      <Button size="sm" variant="outline" className="mt-3 w-full text-blue-600 border-blue-200 hover:bg-blue-50 font-semibold shadow-none" onClick={() => setAssignId(r._id || r.id)}>
+                        Assign Collection
+                      </Button>
                     )}
                   </div>
                 ))}

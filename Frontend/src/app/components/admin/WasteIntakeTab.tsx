@@ -41,6 +41,15 @@ export function WasteIntakeTab() {
   const [convertModal, setConvertModal] = useState<any>({ open: false, item: null });
   const [convertData, setConvertData] = useState({ name: '', category: '', cashPrice: '', pointsCost: '', stock: '', description: '', imageUrl: '' });
   const [converting, setConverting] = useState(false);
+  const [batches, setBatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      setBatches(JSON.parse(localStorage.getItem('gc_pipeline_batches_v2') || '[]'));
+    } catch {
+      setBatches([]);
+    }
+  }, []);
 
   // Center Creation state
   const [createCenterOpen, setCreateCenterOpen] = useState(false);
@@ -484,47 +493,124 @@ export function WasteIntakeTab() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-[20px] border border-gray-200 shadow-sm">
-        <CardHeader><CardTitle className="text-base font-semibold">Intake Log</CardTitle></CardHeader>
-        <CardContent>
-          {loadingRecords ? (
-            <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full rounded-[14px]" />)}</div>
-          ) : records.length === 0 ? (
-            <div className="py-12 text-center"><Scale className="h-10 w-10 mx-auto text-gray-300 mb-2" /><p className="font-medium text-gray-500">No waste intake logged for this period</p></div>
+      <Card className="rounded-[20px] border border-gray-200 shadow-sm overflow-hidden">
+        <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-emerald-50 rounded-xl">
+              <Layers className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-gray-900">Active Batches Progress</CardTitle>
+              <p className="text-xs text-gray-500 mt-0.5">Track the real-time processing status of all waste batches</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {batches.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="h-12 w-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-gray-100">
+                <Package className="h-6 w-6 text-gray-300" />
+              </div>
+              <p className="font-semibold text-gray-900">No active batches</p>
+              <p className="text-sm text-gray-500 mt-1">Start a new batch from the Waste Pipeline to see it here.</p>
+            </div>
           ) : (
-            <div className="overflow-visible w-full" style={{overflowX: 'auto'}}>
-              <table className="w-full text-[15px]">
-                <thead><tr className="border-b border-gray-200 text-left text-[13px] font-semibold text-gray-500 uppercase tracking-wider"><th className="pb-3 pt-2">Date</th><th className="pb-3 pt-2">Type</th><th className="pb-3 pt-2">Weight</th><th className="pb-3 pt-2">District</th><th className="pb-3 pt-2">Status</th><th className="pb-3 pt-2 text-right">Action</th></tr></thead>
-                <tbody className="divide-y divide-gray-100">
-                  {records.map((r) => (
-                    <tr key={r._id || r.id} className="group hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3 font-medium text-gray-900">{r.intakeDate?.slice(0, 10) || '—'}</td>
-                      <td><Badge className={wasteBadgeClass(r.wasteType)}>{r.wasteType}</Badge></td>
-                      <td>{formatKg(r.weightKg)}</td>
-                      <td>{r.location?.district || '—'}</td>
-                      <td className="py-3">
-                        <Select value={r.processingStatus} onValueChange={(v) => updateStatus(r._id || r.id, v)} disabled={r.convertedToProduct === true}>
-                          <SelectTrigger className="h-9 w-36 bg-white shadow-sm rounded-xl"><SelectValue /></SelectTrigger>
-                          <SelectContent className="rounded-xl">{STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </td>
-                      <td className="py-3 text-right">
-                        {!r.convertedToProduct && r.processingStatus === 'packaging' && (
-                          <Button size="sm" variant="outline" className="text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50" onClick={() => convertToProduct(r)}>
-                            → Create Product
-                          </Button>
-                        )}
-                        {r.convertedToProduct && <Badge className="bg-green-100 text-green-800">✅ In Shop</Badge>}
-                      </td>
-                    </tr>
-                  ))}
+            <div className="overflow-visible w-full custom-scrollbar" style={{overflowX: 'auto'}}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50/80 border-b border-gray-100 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="py-3 px-5 font-semibold">Batch ID</th>
+                    <th className="py-3 px-5 font-semibold">Date Started</th>
+                    <th className="py-3 px-5 font-semibold">Type</th>
+                    <th className="py-3 px-5 font-semibold">Weight</th>
+                    <th className="py-3 px-5 font-semibold w-1/4">Progress</th>
+                    <th className="py-3 px-5 font-semibold">Product</th>
+                    <th className="py-3 px-5 font-semibold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {batches.map((b) => {
+                    // Determine total stages based on category
+                    const ORGANIC_STAGES = ['receiving','turning','curing','sieving','packaging','products'];
+                    const PLASTIC_STAGES = ['receiving','shredding','melting','mixing','molding','finishing','products'];
+                    const MIXED_STAGES   = ['receiving','sorting','processing','blending','forming','finishing','products'];
+                    
+                    const stages = b.category === 'plastic' ? PLASTIC_STAGES : (b.category === 'mixed' ? MIXED_STAGES : ORGANIC_STAGES);
+                    const progress = ((stages.indexOf(b.stage) + 1) / stages.length) * 100;
+                    
+                    const badgeClass = 
+                      b.category === 'organic' ? 'bg-green-100 text-green-700 border-green-200' :
+                      b.category === 'plastic' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                                 'bg-purple-100 text-purple-700 border-purple-200';
+                    const progressColor = 
+                      b.category === 'organic' ? 'bg-green-500' :
+                      b.category === 'plastic' ? 'bg-blue-500' :
+                                                 'bg-purple-500';
+
+                    return (
+                      <tr key={b.id} className="group hover:bg-gray-50/50 transition-colors">
+                        <td className="py-4 px-5">
+                          <span className="font-bold text-gray-900">{b.id}</span>
+                        </td>
+                        <td className="py-4 px-5 text-gray-500">
+                          {b.createdAt ? b.createdAt.slice(0, 10) : '—'}
+                        </td>
+                        <td className="py-4 px-5">
+                          <Badge variant="outline" className={`font-bold border ${badgeClass} capitalize`}>
+                            {b.category === 'mixed' ? '🔀 Mixed' : (b.category === 'organic' ? '🌿 Organic' : '♻️ Plastic')}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-5">
+                          {b.category === 'mixed' ? (
+                            <div className="flex flex-col">
+                              <span className="font-bold text-gray-900">{b.weightKg} kg</span>
+                              <span className="text-[10px] text-gray-500 font-medium">🌿{b.organicKg} + ♻️{b.recyclableKg}</span>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-gray-900">{b.weightKg} kg</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-5">
+                          <div className="w-full max-w-[200px]">
+                            <div className="flex justify-between text-[11px] font-semibold text-gray-500 mb-1.5">
+                              <span className="capitalize">{b.stage}</span>
+                              <span>{Math.round(progress)}%</span>
+                            </div>
+                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-500 ${progressColor}`} style={{ width: `${progress}%` }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-5 text-gray-700 text-sm font-medium">
+                          {b.convertedToProduct ? (
+                            b.productName ? (
+                              <span className="flex items-center gap-1.5">
+                                <Package className="h-3.5 w-3.5 text-gray-400" />
+                                {b.productName}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">Unknown Product</span>
+                            )
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          {b.convertedToProduct ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0 shadow-none font-bold">
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Converted
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 shadow-none font-bold">
+                              <Loader2 className="h-3 w-3 mr-1.5 animate-spin" /> In Progress
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-              <div className="flex justify-between mt-4">
-                <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="text-sm font-medium disabled:opacity-40">Previous</button>
-                <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
-                <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="text-sm font-medium disabled:opacity-40">Next</button>
-              </div>
             </div>
           )}
         </CardContent>

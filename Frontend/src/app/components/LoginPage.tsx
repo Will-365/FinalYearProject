@@ -213,9 +213,9 @@ export function LoginPage({ onBackToHome, onShowSignup }: LoginPageProps) {
       {/* ─── LEFT PANEL ─── */}
       <div className="login-left" style={{
         position: 'relative',
-        background: 'linear-gradient(160deg, #042010 0%, #0a2e16 40%, #05160a 100%)',
+        background: 'linear-gradient(160deg, #042010 0%, #0a2e16 45%, #051a0b 100%)',
         display: 'flex', flexDirection: 'column',
-        justifyContent: 'space-between', padding: '48px 44px',
+        justifyContent: 'center', padding: '52px 44px',
         overflow: 'hidden',
       }}>
         {/* Background image */}
@@ -223,85 +223,102 @@ export function LoginPage({ onBackToHome, onShowSignup }: LoginPageProps) {
           position: 'absolute', inset: 0,
           backgroundImage: 'url(https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900)',
           backgroundSize: 'cover', backgroundPosition: 'center',
-          mixBlendMode: 'luminosity', opacity: 0.12, zIndex: 0,
+          mixBlendMode: 'luminosity', opacity: 0.1, zIndex: 0,
         }} />
 
-        {/* Decorative circles */}
-        <div style={{ position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: '50%', background: 'radial-gradient(circle, rgba(74,222,128,0.08) 0%, transparent 70%)', zIndex: 0 }} />
-        <div style={{ position: 'absolute', bottom: -60, left: -60, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%)', zIndex: 0 }} />
+        {/* Decorative glow circles */}
+        <div style={{ position: 'absolute', top: -100, right: -100, width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(74,222,128,0.07) 0%, transparent 70%)', zIndex: 0 }} />
+        <div style={{ position: 'absolute', bottom: -80, left: -80, width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(74,222,128,0.05) 0%, transparent 70%)', zIndex: 0 }} />
 
-        <div style={{ position: 'relative', zIndex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 40 }}>
+
+          {/* ── Logo row ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
-              width: 48, height: 48, borderRadius: 14,
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+              width: 52, height: 52, borderRadius: 15,
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.13)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backdropFilter: 'blur(10px)',
+              backdropFilter: 'blur(12px)', flexShrink: 0,
             }}>
-              <img src={greencareLogo} alt="GreenCare" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+              <img src={greencareLogo} alt="GreenCare" style={{ width: 34, height: 34, objectFit: 'contain' }} />
             </div>
             <div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>GreenCare</div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Rwanda</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em', lineHeight: 1.2 }}>GreenCare</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.38)', fontWeight: 500, letterSpacing: '0.07em', textTransform: 'uppercase', marginTop: 2 }}>Rwanda</div>
+            </div>
+
+            {/* Sustainable Future badge — right of logo */}
+            <div style={{
+              marginLeft: 'auto',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.22)',
+              borderRadius: 100, padding: '5px 13px',
+            }}>
+              <Leaf style={{ width: 12, height: 12, color: '#4ade80' }} />
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4ade80', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Sustainable Future</span>
             </div>
           </div>
 
-          {/* Hero text */}
+          {/* ── Main headline ── */}
           <div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.2)',
-              borderRadius: 100, padding: '5px 14px', marginBottom: 20,
-            }}>
-              <Leaf style={{ width: 13, height: 13, color: '#4ade80' }} />
-              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#4ade80', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Sustainable Future</span>
-            </div>
-
             <h1 style={{
-              fontSize: 'clamp(1.6rem, 2.8vw, 2.2rem)', fontWeight: 900,
-              color: '#ffffff', lineHeight: 1.15,
-              letterSpacing: '-0.03em', maxWidth: 300, marginBottom: 20,
+              fontSize: 'clamp(1.7rem, 3vw, 2.4rem)', fontWeight: 900,
+              color: '#ffffff', lineHeight: 1.12,
+              letterSpacing: '-0.03em', marginBottom: 16,
             }}>
               Turning Rwanda&apos;s<br/>
               <span style={{ color: '#4ade80' }}>waste</span> into<br/>
               tomorrow&apos;s wealth.
             </h1>
-
-            <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 280 }}>
+            <p style={{ fontSize: '0.87rem', color: 'rgba(255,255,255,0.48)', lineHeight: 1.75, maxWidth: 290 }}>
               Join Rwanda&apos;s largest eco-community. Recycle, earn rewards, and track your environmental impact in real time.
             </p>
           </div>
 
-          {/* Testimonial */}
+          {/* ── Get Started CTA block ── */}
           <div style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 16, padding: '20px 22px',
+            background: 'rgba(74,222,128,0.06)',
+            border: '1px solid rgba(74,222,128,0.15)',
+            borderRadius: 18, padding: '24px 22px',
             backdropFilter: 'blur(10px)',
           }}>
-            <div style={{ display: 'flex', gap: 2, marginBottom: 12 }}>
-              {[...Array(5)].map((_, i) => (
-                <span key={i} style={{ color: '#fbbf24', fontSize: '0.85rem' }}>★</span>
-              ))}
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.72)', lineHeight: 1.65, margin: 0, fontStyle: 'italic' }}>
-              &ldquo;Neza cyane! The app made waste pickup in Kimironko so easy and I earned 3,400 RWF last month.&rdquo;
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
               <div style={{
-                width: 32, height: 32, borderRadius: '50%',
+                width: 36, height: 36, borderRadius: 10,
                 background: 'linear-gradient(135deg, #4ade80, #16a34a)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.8rem', fontWeight: 700, color: '#fff',
-              }}>U</div>
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Leaf style={{ width: 18, height: 18, color: '#fff' }} />
+              </div>
               <div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>Uwase Claudine</div>
-                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)' }}>Resident · Gasabo District</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>
+                  Get started with GreenCare Loop
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>
+                  Your eco journey starts here
+                </div>
               </div>
             </div>
+
+            {/* Feature list */}
+            {[
+              'Schedule waste pickups from your home',
+              'Earn Green Points for every recycled kg',
+              'Track your environmental impact live',
+            ].map((feat, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: i < 2 ? 12 : 0 }}>
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%',
+                  background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1,
+                }}>
+                  <Check style={{ width: 11, height: 11, color: '#4ade80' }} />
+                </div>
+                <span style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.62)', lineHeight: 1.55 }}>{feat}</span>
+              </div>
+            ))}
           </div>
+
         </div>
       </div>
 

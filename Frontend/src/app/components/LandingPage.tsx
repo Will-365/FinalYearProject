@@ -334,6 +334,42 @@ export function LandingPage({ onGetStarted, onShopClick, onBuyerClick }: Landing
           </AnimatePresence>
         </div>
 
+        {/* Hero Text Overlay — centered on image */}
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(5,18,8,0.65) 0%, rgba(5,18,8,0.35) 50%, rgba(5,18,8,0.25) 100%)' }}
+        >
+          <div className="px-4 sm:px-6 lg:px-8 w-full text-center">
+            <h1
+              style={{
+                fontSize: 'clamp(2rem, 5vw, 3.4rem)',
+                fontWeight: 900,
+                color: '#ffffff',
+                lineHeight: 1.12,
+                letterSpacing: '-0.02em',
+                textShadow: '0 2px 32px rgba(0,0,0,0.65)',
+                margin: '0 auto 0.6rem',
+                maxWidth: 800,
+              }}
+            >
+              Our Environment, Our Concern
+            </h1>
+            <p
+              style={{
+                fontSize: 'clamp(1rem, 2vw, 1.25rem)',
+                color: 'rgba(255,255,255,0.90)',
+                fontWeight: 400,
+                letterSpacing: '0.01em',
+                textShadow: '0 1px 16px rgba(0,0,0,0.5)',
+                margin: '0 auto',
+                maxWidth: 560,
+              }}
+            >
+              Turning bio-waste into solutions for a greener Rwanda.
+            </p>
+          </div>
+        </div>
+
         {/* Slider Controls */}
         <div className="absolute bottom-8 left-0 right-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

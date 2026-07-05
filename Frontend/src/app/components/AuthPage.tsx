@@ -233,9 +233,19 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
 
   const validateField = (field: string, val: string | boolean) => {
     let error = '';
-    if (field === 'fullName' && (!val || (val as string).length < 2)) error = 'Full name must be at least 2 characters';
+    if (field === 'fullName') {
+      const name = val as string;
+      if (!name || name.trim().length < 2) error = 'Full name must be at least 2 characters';
+      else if (name.trim().length > 60) error = 'Full name must be at most 60 characters';
+      else if (/[0-9]/.test(name)) error = 'Full name must not contain numbers';
+      else if (/[^a-zA-Z\s'\-.àáâãäåèéêëìíîïòóôõöùúûüýÿÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝ]/.test(name)) error = 'Full name contains invalid characters';
+    }
     if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val as string)) error = 'Please enter a valid email address';
-    if (field === 'phone' && !/^\+250[0-9]{9}$/.test(val as string)) error = 'Phone must be in format +250XXXXXXXXX';
+    if (field === 'phone') {
+      const phone = (val as string).trim();
+      // Accept: +250XXXXXXXXX OR 0XXXXXXXXX OR 9-digit local (7XXXXXXXX)
+      if (!/^(\+250[0-9]{9}|0[0-9]{9}|[0-9]{9})$/.test(phone)) error = 'Enter a valid Rwandan number e.g. 0792397681 or +250792397681';
+    }
     if (field === 'nationalId' && !/^[13][0-9]{15}$/.test((val as string).replace(/\s/g, ''))) error = 'National ID must be 16 digits starting with 1 or 3';
     if (field === 'password' && (val as string).length < 8) error = 'Password must be at least 8 characters';
     if (field === 'confirmPassword' && val !== formData.password) error = 'Passwords do not match';
@@ -536,14 +546,19 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={{ gridColumn: 'span 2' }}>
                 <Inp label="Full Name" name="fullName" placeholder="e.g. Uwase Claudine" value={formData.fullName}
-                  onChange={v => updateField('fullName', v)} error={errors.fullName} onBlur={() => handleBlur('fullName')} />
+                  onChange={v => {
+                    // Block digits as user types
+                    const cleaned = v.replace(/[0-9]/g, '');
+                    if (cleaned.length <= 60) updateField('fullName', cleaned);
+                  }}
+                  error={errors.fullName} onBlur={() => handleBlur('fullName')} />
               </div>
               <div style={{ gridColumn: 'span 2' }}>
                 <Inp label="Email Address" name="email" type="email" placeholder="your@email.com" value={formData.email}
                   onChange={v => updateField('email', v)} error={errors.email} onBlur={() => handleBlur('email')} />
               </div>
-              <Inp label="Phone Number" name="phone" type="tel" placeholder="7XX XXX XXX" value={formData.phone}
-                onChange={v => updateField('phone', v)} error={errors.phone} prefix="+250" onBlur={() => handleBlur('phone')} />
+              <Inp label="Phone Number" name="phone" type="tel" placeholder="e.g. 0792397681" value={formData.phone}
+                onChange={v => updateField('phone', v)} error={errors.phone} onBlur={() => handleBlur('phone')} />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151' }}>National ID Number</label>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { adminWasteIntakeService } from '@/services/adminService';
+import { adminWasteIntakeService, adminCatalogService } from '@/services/adminService';
 import { Button } from '@/app/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/app/components/ui/dialog';
 import { Input } from '@/app/components/ui/input';
@@ -100,8 +100,9 @@ export function AdminWastePipeline() {
 
   // Convert modal
   const [convertModal, setConvertModal] = useState({ open: false, batch: null });
-  const [convertData, setConvertData]   = useState(CONVERT_DEFAULT);
+  const [convertData, setConvertData]   = useState({ ...CONVERT_DEFAULT, isExisting: true, selectedProductId: '' });
   const [converting, setConverting]     = useState(false);
+  const [products, setProducts]         = useState([]);
 
   // ── Stockpile ─────────────────────────────────────────────────────────────
   const fetchStockpile = useCallback(async () => {
@@ -210,6 +211,12 @@ export function AdminWastePipeline() {
   const handleConvert = async (e) => {
     e.preventDefault();
     if (!convertModal.batch) return;
+    
+    if (convertData.isExisting && !convertData.selectedProductId) {
+      toast.error('Please select an existing product');
+      return;
+    }
+
     setConverting(true);
     try {
       const intakeRes = await adminWasteIntakeService.create({
@@ -220,24 +227,44 @@ export function AdminWastePipeline() {
         notes: `Batch ${convertModal.batch.id} — processed through pipeline`,
       });
       const intakeId = intakeRes?.data?._id || intakeRes?._id || intakeRes?.data?.id;
-      if (intakeId) {
-        // The backend requires the intake to be at the 'packaging' stage before conversion
-        await adminWasteIntakeService.advanceStage(intakeId, { stage: 'packaging' });
 
-        await adminWasteIntakeService.convertToProduct(intakeId, {
-          name: convertData.name, category: convertData.category,
-          cashPrice: Number(convertData.cashPrice), pointsCost: Number(convertData.pointsCost),
-          stock: Number(convertData.stock), description: convertData.description,
-          imageUrl: convertData.imageUrl || 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&q=80',
+      if (convertData.isExisting) {
+        if (intakeId) {
+          // Just advance it to packaging/product to finalize it without creating a new product
+          await adminWasteIntakeService.advanceStage(intakeId, { stage: 'packaging' }).catch(() => {});
+        }
+        await adminCatalogService.adjustStock(convertData.selectedProductId, {
+          quantity: Number(convertData.stock),
+          reason: `Converted from Batch ${convertModal.batch.id}`,
         });
+        
+        const prod = products.find(p => (p._id || p.id) === convertData.selectedProductId);
+        const updated = batches.map(b =>
+          b.id === convertModal.batch.id ? { ...b, convertedToProduct: true, productName: prod?.name || 'Existing Product' } : b
+        );
+        setBatches(updated); saveBatches(updated);
+        toast.success(`Added ${convertData.stock}kg/units to ${prod?.name || 'product'}!`);
+      } else {
+        if (intakeId) {
+          // The backend requires the intake to be at the 'packaging' stage before conversion
+          await adminWasteIntakeService.advanceStage(intakeId, { stage: 'packaging' });
+
+          await adminWasteIntakeService.convertToProduct(intakeId, {
+            name: convertData.name, category: convertData.category,
+            cashPrice: Number(convertData.cashPrice), pointsCost: Number(convertData.pointsCost),
+            stock: Number(convertData.stock), description: convertData.description,
+            imageUrl: convertData.imageUrl || 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&q=80',
+          });
+        }
+        const updated = batches.map(b =>
+          b.id === convertModal.batch.id ? { ...b, convertedToProduct: true, productName: convertData.name } : b
+        );
+        setBatches(updated); saveBatches(updated);
+        toast.success(`Batch ${convertModal.batch.id} converted to product!`);
       }
-      const updated = batches.map(b =>
-        b.id === convertModal.batch.id ? { ...b, convertedToProduct: true, productName: convertData.name } : b
-      );
-      setBatches(updated); saveBatches(updated);
-      toast.success(`Batch ${convertModal.batch.id} converted to product!`);
+
       setConvertModal({ open: false, batch: null });
-      setConvertData(CONVERT_DEFAULT);
+      setConvertData({ ...CONVERT_DEFAULT, isExisting: true, selectedProductId: '' });
     } catch (err) {
       toast.error(err?.message || 'Failed to convert');
     } finally { setConverting(false); }
@@ -329,7 +356,7 @@ export function AdminWastePipeline() {
             </Button>
           ) : (
             <Button
-              onClick={() => { setConvertModal({ open: true, batch }); setConvertData(CONVERT_DEFAULT); }}
+              onClick={() => { setConvertModal({ open: true, batch }); setConvertData({ ...CONVERT_DEFAULT, stock: batch.weightKg, isExisting: true, selectedProductId: '' }); }}
               className="w-full h-9 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 shadow"
             >
               <Package className="h-3.5 w-3.5" /> Convert to Product
@@ -703,50 +730,84 @@ export function AdminWastePipeline() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Product Name *</label>
-              <Input required value={convertData.name} onChange={e => setConvertData({ ...convertData, name: e.target.value })} placeholder="E.g. Organic Compost Fertiliser" className="rounded-xl" />
+            {/* Mode Toggle */}
+            <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+              <button type="button" onClick={() => setConvertData({ ...convertData, isExisting: true })} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors ${convertData.isExisting ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                Add to Existing
+              </button>
+              <button type="button" onClick={() => setConvertData({ ...convertData, isExisting: false })} className={`flex-1 py-1.5 text-sm font-semibold rounded-lg transition-colors ${!convertData.isExisting ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                Create New
+              </button>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Image URL</label>
-              <Input value={convertData.imageUrl} onChange={e => setConvertData({ ...convertData, imageUrl: e.target.value })} placeholder="Optional: https://..." className="rounded-xl" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category *</label>
-                <select required value={convertData.category} onChange={e => setConvertData({ ...convertData, category: e.target.value })} className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-white">
-                  <option value="">Select...</option>
-                  <option value="compost">Compost</option>
-                  <option value="fertiliser">Fertiliser</option>
-                  <option value="pavers">Pavers</option>
-                  <option value="recycled_goods">Recycled Goods</option>
-                  <option value="plastic_product">Plastic Product</option>
-                  <option value="eco_product">Eco Product</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Initial Stock</label>
-                <Input required type="number" min="1" value={convertData.stock} onChange={e => setConvertData({ ...convertData, stock: e.target.value })} placeholder="Units" className="rounded-xl" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Cash Price (RWF)</label>
-                <Input required type="number" min="0" value={convertData.cashPrice} onChange={e => setConvertData({ ...convertData, cashPrice: e.target.value })} placeholder="0" className="rounded-xl" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Points Cost</label>
-                <Input required type="number" min="0" value={convertData.pointsCost} onChange={e => setConvertData({ ...convertData, pointsCost: e.target.value })} placeholder="0" className="rounded-xl" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <Textarea value={convertData.description} onChange={e => setConvertData({ ...convertData, description: e.target.value })} placeholder="Product details..." className="rounded-xl resize-none" rows={2} />
-            </div>
-            <DialogFooter className="gap-2 pt-2">
+
+            {convertData.isExisting ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Product *</label>
+                  <select required value={convertData.selectedProductId} onChange={e => setConvertData({ ...convertData, selectedProductId: e.target.value })} className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-white">
+                    <option value="">Select an existing product...</option>
+                    {products.map(p => (
+                      <option key={p._id || p.id} value={p._id || p.id}>
+                        {p.name} ({p.category}) - Current Stock: {p.stock}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Quantity to Add (kg/units) *</label>
+                  <Input required type="number" min="1" value={convertData.stock} onChange={e => setConvertData({ ...convertData, stock: e.target.value })} placeholder="Units" className="rounded-xl" />
+                  <p className="text-xs text-gray-500">This will be added to the product's current stock.</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Product Name *</label>
+                  <Input required value={convertData.name} onChange={e => setConvertData({ ...convertData, name: e.target.value })} placeholder="E.g. Organic Compost Fertiliser" className="rounded-xl" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Image URL</label>
+                  <Input value={convertData.imageUrl} onChange={e => setConvertData({ ...convertData, imageUrl: e.target.value })} placeholder="Optional: https://..." className="rounded-xl" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Category *</label>
+                    <select required value={convertData.category} onChange={e => setConvertData({ ...convertData, category: e.target.value })} className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-white">
+                      <option value="">Select...</option>
+                      <option value="compost">Compost</option>
+                      <option value="fertiliser">Fertiliser</option>
+                      <option value="pavers">Pavers</option>
+                      <option value="recycled_goods">Recycled Goods</option>
+                      <option value="plastic_product">Plastic Product</option>
+                      <option value="eco_product">Eco Product</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Initial Stock</label>
+                    <Input required type="number" min="1" value={convertData.stock} onChange={e => setConvertData({ ...convertData, stock: e.target.value })} placeholder="Units" className="rounded-xl" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Cash Price (RWF)</label>
+                    <Input required type="number" min="0" value={convertData.cashPrice} onChange={e => setConvertData({ ...convertData, cashPrice: e.target.value })} placeholder="0" className="rounded-xl" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Points Cost</label>
+                    <Input required type="number" min="0" value={convertData.pointsCost} onChange={e => setConvertData({ ...convertData, pointsCost: e.target.value })} placeholder="0" className="rounded-xl" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea value={convertData.description} onChange={e => setConvertData({ ...convertData, description: e.target.value })} placeholder="Product details..." className="rounded-xl resize-none" rows={2} />
+                </div>
+              </>
+            )}
+
+            <DialogFooter className="gap-2 pt-2 mt-4">
               <Button type="button" variant="outline" onClick={() => setConvertModal({ open: false, batch: null })}>Cancel</Button>
               <Button type="submit" disabled={converting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6">
-                {converting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Converting...</> : 'Create Product'}
+                {converting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</> : (convertData.isExisting ? 'Update Stock' : 'Create Product')}
               </Button>
             </DialogFooter>
           </form>

@@ -116,32 +116,32 @@ export function CollectorFormModal({ open, onClose, collector, onSuccess }: Coll
     }
   };
 
-  const InputField = ({
-    fieldKey, label, icon: Icon, type = 'text', placeholder = '', maxLength, suffix
-  }: { fieldKey: string; label: string; icon: any; type?: string; placeholder?: string; maxLength?: number; suffix?: React.ReactNode }) => (
-    <div>
-      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
-      <div className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 bg-white transition-all duration-200
-        ${errors[fieldKey] ? 'border-red-400 bg-red-50' : 'border-gray-200 focus-within:border-green-500 focus-within:shadow-[0_0_0_3px_rgba(22,163,74,0.08)]'}`}>
-        <Icon className={`w-4 h-4 flex-shrink-0 ${errors[fieldKey] ? 'text-red-400' : 'text-gray-400'}`} />
-        <input
-          type={type}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          value={(form as any)[fieldKey]}
-          onChange={e => setField(fieldKey, e.target.value)}
-          className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none min-w-0"
-        />
-        {suffix}
-      </div>
-      {errors[fieldKey] && (
-        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">!</span>
-          {errors[fieldKey]}
-        </p>
-      )}
+const InputField = ({
+  fieldKey, label, icon: Icon, type = 'text', placeholder = '', maxLength, suffix, value, onChange, error
+}: { fieldKey: string; label: string; icon: any; type?: string; placeholder?: string; maxLength?: number; suffix?: React.ReactNode; value: string; onChange: (val: string) => void; error?: string }) => (
+  <div>
+    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
+    <div className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 bg-white transition-all duration-200
+      ${error ? 'border-red-400 bg-red-50' : 'border-gray-200 focus-within:border-green-500 focus-within:shadow-[0_0_0_3px_rgba(22,163,74,0.08)]'}`}>
+      <Icon className={`w-4 h-4 flex-shrink-0 ${error ? 'text-red-400' : 'text-gray-400'}`} />
+      <input
+        type={type}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none min-w-0"
+      />
+      {suffix}
     </div>
-  );
+    {error && (
+      <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+        <span className="inline-block w-3 h-3 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">!</span>
+        {error}
+      </p>
+    )}
+  </div>
+);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -174,16 +174,19 @@ export function CollectorFormModal({ open, onClose, collector, onSuccess }: Coll
               <div className="flex-1 h-px bg-gray-200" />
             </div>
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 grid gap-3">
-              <InputField fieldKey="fullName" label="Full Name" icon={User} placeholder="e.g. Jean Claude Habimana" />
-              <InputField fieldKey="email" label="Email Address" icon={Mail} type="email" placeholder="collector@example.com" />
-              <InputField fieldKey="phone" label="Phone Number" icon={Phone} placeholder="+250788123456" />
-              <InputField fieldKey="nationalId" label="National ID" icon={CreditCard} placeholder="16-digit ID number" maxLength={16} />
+              <InputField fieldKey="fullName" label="Full Name" icon={User} placeholder="e.g. Jean Claude Habimana" value={form.fullName} onChange={(val) => setField('fullName', val)} error={errors.fullName} />
+              <InputField fieldKey="email" label="Email Address" icon={Mail} type="email" placeholder="collector@example.com" value={form.email} onChange={(val) => setField('email', val)} error={errors.email} />
+              <InputField fieldKey="phone" label="Phone Number" icon={Phone} placeholder="+250788123456" value={form.phone} onChange={(val) => setField('phone', val)} error={errors.phone} />
+              <InputField fieldKey="nationalId" label="National ID" icon={CreditCard} placeholder="16-digit ID number" maxLength={16} value={form.nationalId} onChange={(val) => setField('nationalId', val)} error={errors.nationalId} />
               <InputField
                 fieldKey="password"
                 label={isEdit ? 'New Password (optional)' : 'Password'}
                 icon={Lock}
                 type={showPassword ? 'text' : 'password'}
                 placeholder={isEdit ? 'Leave blank to keep current' : 'Set a strong password'}
+                value={form.password}
+                onChange={(val) => setField('password', val)}
+                error={errors.password}
                 suffix={
                   <button type="button" onClick={() => setShowPassword(s => !s)} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

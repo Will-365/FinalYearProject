@@ -26,6 +26,33 @@ const VEHICLES = [
 
 const PROVINCES = Object.keys(rwandaLocations);
 
+const InputField = ({
+  fieldKey, label, icon: Icon, type = 'text', placeholder = '', maxLength, suffix, value, onChange, error
+}: { fieldKey: string; label: string; icon: any; type?: string; placeholder?: string; maxLength?: number; suffix?: React.ReactNode; value: string; onChange: (val: string) => void; error?: string }) => (
+  <div>
+    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
+    <div className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 bg-white transition-all duration-200
+      ${error ? 'border-red-400 bg-red-50' : 'border-gray-200 focus-within:border-green-500 focus-within:shadow-[0_0_0_3px_rgba(22,163,74,0.08)]'}`}>
+      <Icon className={`w-4 h-4 flex-shrink-0 ${error ? 'text-red-400' : 'text-gray-400'}`} />
+      <input
+        type={type}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none min-w-0"
+      />
+      {suffix}
+    </div>
+    {error && (
+      <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+        <span className="inline-block w-3 h-3 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">!</span>
+        {error}
+      </p>
+    )}
+  </div>
+);
+
 export function CollectorFormModal({ open, onClose, collector, onSuccess }: CollectorFormModalProps) {
   const isEdit = Boolean(collector);
   const { showToast } = useToast();
@@ -115,33 +142,6 @@ export function CollectorFormModal({ open, onClose, collector, onSuccess }: Coll
       setSubmitting(false);
     }
   };
-
-const InputField = ({
-  fieldKey, label, icon: Icon, type = 'text', placeholder = '', maxLength, suffix, value, onChange, error
-}: { fieldKey: string; label: string; icon: any; type?: string; placeholder?: string; maxLength?: number; suffix?: React.ReactNode; value: string; onChange: (val: string) => void; error?: string }) => (
-  <div>
-    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{label}</label>
-    <div className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 bg-white transition-all duration-200
-      ${error ? 'border-red-400 bg-red-50' : 'border-gray-200 focus-within:border-green-500 focus-within:shadow-[0_0_0_3px_rgba(22,163,74,0.08)]'}`}>
-      <Icon className={`w-4 h-4 flex-shrink-0 ${error ? 'text-red-400' : 'text-gray-400'}`} />
-      <input
-        type={type}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none min-w-0"
-      />
-      {suffix}
-    </div>
-    {error && (
-      <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
-        <span className="inline-block w-3 h-3 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">!</span>
-        {error}
-      </p>
-    )}
-  </div>
-);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>

@@ -13,7 +13,7 @@ import { getStoredToken, api } from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { formatKg, wasteBadgeClass } from '@/utils/adminHelpers';
 import { rwandaLocations } from '@/app/data/rwandaLocations';
-import { Scale, Plus, Package, CheckCircle2, ArrowUpRight, TrendingUp, Layers, AlertTriangle, ShieldCheck, MapPin } from 'lucide-react';
+import { Scale, Plus, Package, CheckCircle2, ArrowUpRight, TrendingUp, Layers, AlertTriangle, ShieldCheck, MapPin, Loader2 } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const PERIODS = [

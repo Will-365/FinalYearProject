@@ -7,9 +7,9 @@ import { awardPoints } from '../../utils/pointsService.js';
 
 /**
  * Pipeline stages (in order):
- *   received → sorting → curing → forming → packaging → product
+ *   received → sorting → turning → curing → forming → packaging → product
  */
-const PIPELINE_ORDER = ['received', 'sorting', 'curing', 'forming', 'packaging', 'product'];
+const PIPELINE_ORDER = ['received', 'sorting', 'turning', 'curing', 'forming', 'packaging', 'product'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/waste-intake

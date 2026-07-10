@@ -46,6 +46,7 @@ export const adminCouponService = {
 
 export const adminWasteIntakeService = {
   getAnalytics: (params = {}) => api.get('/admin/waste-intake/analytics', { params }).then(unwrap),
+  getTurningAdvisory: (params = {}) => api.get('/admin/waste-intake/turning-advisory', { params }).then(unwrap),
   getAll: (params = {}) => api.get('/admin/waste-intake', { params }).then(unwrap),
   getDiscrepancies: (params = {}) => api.get('/admin/waste-intake/discrepancies', { params }).then(unwrap),
   create: (data) => api.post('/admin/waste-intake', data).then(unwrap),

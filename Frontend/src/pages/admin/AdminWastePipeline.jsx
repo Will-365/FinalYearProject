@@ -11,6 +11,7 @@ import {
   Scissors, Combine, Hammer, Zap, LayoutGrid,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { TurningWeatherWidget } from '@/components/pipeline/TurningWeatherWidget';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PIPELINE DEFINITIONS
@@ -193,17 +194,44 @@ export function AdminWastePipeline() {
   };
 
   // ── Advance stage ─────────────────────────────────────────────────────────
-  const handleAdvance = (batchId) => {
-    const updated = batches.map(b => {
+  const handleAdvance = async (batchId) => {
+    const batch = batches.find((b) => b.id === batchId);
+    if (!batch) return;
+
+    const stages = PIPELINE_CONFIG[batch.category]?.stages || ORGANIC_STAGES;
+    const idx = stages.indexOf(batch.stage);
+    if (idx < 0 || idx >= stages.length - 1) return;
+    const next = stages[idx + 1];
+
+    if (next === 'turning') {
+      try {
+        const res = await adminWasteIntakeService.getTurningAdvisory({ district: 'Gasabo' });
+        const advisory = res.data || res;
+        if (advisory.recommendation === 'wait') {
+          const proceed = window.confirm(
+            `${advisory.message}\n\nBest window: ${advisory.bestWindows?.[0]?.label || 'check widget'}\n\nProceed to turning anyway?`
+          );
+          if (!proceed) return;
+        } else if (advisory.recommendation === 'optimal') {
+          toast.success('Weather is ideal for turning — proceeding');
+        }
+      } catch {
+        /* proceed without blocking */
+      }
+    }
+
+    const weatherNote = next === 'turning' ? { weatherCheckedAt: new Date().toISOString() } : {};
+    const updated = batches.map((b) => {
       if (b.id !== batchId) return b;
-      const stages = PIPELINE_CONFIG[b.category]?.stages || ORGANIC_STAGES;
-      const idx = stages.indexOf(b.stage);
-      if (idx < 0 || idx >= stages.length - 1) return b;
-      const next = stages[idx + 1];
-      return { ...b, stage: next, history: [...b.history, { stage: next, timestamp: new Date().toISOString() }] };
+      return {
+        ...b,
+        stage: next,
+        history: [...b.history, { stage: next, timestamp: new Date().toISOString(), ...weatherNote }],
+      };
     });
-    setBatches(updated); saveBatches(updated);
-    const b = updated.find(x => x.id === batchId);
+    setBatches(updated);
+    saveBatches(updated);
+    const b = updated.find((x) => x.id === batchId);
     toast.success(`${batchId} → ${ALL_STAGE_META[b.stage]?.label || b.stage}`);
   };
 
@@ -350,9 +378,17 @@ export function AdminWastePipeline() {
           !isLast ? (
             <Button
               onClick={() => handleAdvance(batch.id)}
-              className="w-full h-9 text-xs font-bold bg-white text-gray-700 border border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 flex items-center justify-center gap-2 shadow-sm"
+              className={`w-full h-9 text-xs font-bold flex items-center justify-center gap-2 shadow-sm ${
+                batch.stage === 'receiving' && batch.category === 'organic'
+                  ? 'bg-lime-50 text-lime-800 border border-lime-200 hover:bg-lime-100'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+              }`}
             >
-              Next Stage <ArrowRight className="h-3.5 w-3.5" />
+              {stages[stages.indexOf(batch.stage) + 1] === 'turning' ? (
+                <><Wind className="h-3.5 w-3.5" /> Advance to Turning</>
+              ) : (
+                <>Next Stage <ArrowRight className="h-3.5 w-3.5" /></>
+              )}
             </Button>
           ) : (
             <Button
@@ -493,6 +529,11 @@ export function AdminWastePipeline() {
           </button>
         ))}
       </div>
+
+      {/* ── Turning weather (organic pipeline) ─────────────────────────── */}
+      {activeTab === 'organic' && (
+        <TurningWeatherWidget defaultDistrict="Gasabo" />
+      )}
 
       {/* ── Stage progress legend ────────────────────────────────────────── */}
       <div className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-2xl px-5 py-3 shadow-sm overflow-x-auto">

@@ -179,6 +179,13 @@ export function CollectorTasksPage() {
         </div>
       )}
 
+      {tab === 'assigned' && pickups.length > 0 && (
+        <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-center gap-2">
+          <Package className="h-4 w-4 shrink-0" />
+          You have <strong>{pickups.length}</strong> active pickup{pickups.length > 1 ? 's' : ''} — complete them in any order.
+        </div>
+      )}
+
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-3 rounded-xl bg-gray-100 p-1 h-auto">
           {Object.entries(TAB_META).map(([key, meta]) => (

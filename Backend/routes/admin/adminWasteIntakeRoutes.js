@@ -8,6 +8,7 @@ import {
   convertToProduct,
   resolveDiscrepancy,
 } from '../../controllers/admin/adminWasteIntakeController.js';
+import { getTurningAdvisory } from '../../controllers/admin/weatherController.js';
 import { protect, authorize } from '../../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -15,6 +16,7 @@ router.use(protect, authorize('admin'));
 
 // Analytics & summaries
 router.get('/analytics',     getWasteIntakeAnalytics);
+router.get('/turning-advisory', getTurningAdvisory);
 router.get('/discrepancies', getDiscrepancies);
 
 // CRUD

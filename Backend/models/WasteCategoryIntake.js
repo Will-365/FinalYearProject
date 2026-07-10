@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 /**
  * Processing stages for waste-to-product pipeline:
- *  received → sorting → curing → forming → packaging → product (ready for sale)
+ *  received → sorting → turning → curing → forming → packaging → product (ready for sale)
  */
 const wasteCategoryIntakeSchema = new mongoose.Schema(
   {
@@ -59,7 +59,7 @@ const wasteCategoryIntakeSchema = new mongoose.Schema(
     // ── Waste-to-product processing pipeline ─────────────────
     processingStatus: {
       type: String,
-      enum: ['received', 'sorting', 'curing', 'forming', 'packaging', 'product', 'disposed'],
+      enum: ['received', 'sorting', 'turning', 'curing', 'forming', 'packaging', 'product', 'disposed'],
       default: 'received',
     },
     processingHistory: [

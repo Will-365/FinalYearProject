@@ -132,6 +132,14 @@ export const assignPickup = async (req, res, next) => {
       return res.status(400).json({ success: false, message: `Cannot assign request with status '${request.status}'` });
     }
 
+    if (collector.collectorStatus === 'offline') {
+      return res.status(400).json({
+        success: false,
+        message: `${collector.fullName} is offline. Set them to available or on route before assigning.`,
+      });
+    }
+
+    const wasAlreadyAssigned = String(request.collector) === String(collectorId);
     request.collector    = collectorId;
     request.status       = 'assigned';
     request.assignedAt   = new Date();
@@ -143,11 +151,16 @@ export const assignPickup = async (req, res, next) => {
       await User.findByIdAndUpdate(collectorId, { collectorStatus: 'on_route' });
     }
 
+    const totalActive = await CollectionRequest.countDocuments({
+      collector: collectorId,
+      status: { $in: ['assigned', 'in_progress'] },
+    });
+
     await createNotification({
       userId:  collectorId,
       type:    'assignment',
-      title:   'New pickup assigned',
-      message: `Pickup in ${request.location?.district || 'your zone'}: ${request.quantity} ${request.wasteType} waste. Preferred: ${new Date(request.preferredDate).toLocaleDateString('en-RW')} ${request.preferredTimeSlot}.`,
+      title:   totalActive > 1 ? 'Additional pickup assigned' : 'New pickup assigned',
+      message: `Pickup in ${request.location?.district || 'your zone'}: ${request.quantity} ${request.wasteType} waste. You now have ${totalActive} active task${totalActive > 1 ? 's' : ''}. Preferred: ${new Date(request.preferredDate).toLocaleDateString('en-RW')} ${request.preferredTimeSlot}.`,
       relatedId: request._id, relatedModel: 'CollectionRequest',
     });
 
@@ -155,7 +168,13 @@ export const assignPickup = async (req, res, next) => {
       .populate('resident',  'fullName phone location')
       .populate('collector', 'fullName phone vehicleType');
 
-    res.status(200).json({ success: true, message: `Pickup assigned to ${collector.fullName}`, data: populated });
+    res.status(200).json({
+      success: true,
+      message: totalActive > 1
+        ? `Pickup assigned to ${collector.fullName} (${totalActive} active tasks)`
+        : `Pickup assigned to ${collector.fullName}`,
+      data: { request: populated, activeAssignments: totalActive, wasReassignment: wasAlreadyAssigned },
+    });
   } catch (error) { next(error); }
 };
 

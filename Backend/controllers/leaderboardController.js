@@ -1,42 +1,63 @@
 import User from '../models/User.js';
 import PointsLedger from '../models/PointsLedger.js';
-import { getPointsBalance } from '../utils/pointsService.js';
+
+const sanitizeActivity = (entry) => {
+  const item = typeof entry.toObject === 'function' ? entry.toObject() : { ...entry };
+  const desc = item.description || '';
+  const isCoupon =
+    item.source === 'coupon_claim' || /coupon/i.test(desc);
+
+  if (isCoupon) {
+    const spent = item.type === 'spent' || item.type === 'debit' || Number(item.points) < 0;
+    item.description = spent
+      ? 'Points redeemed for a reward'
+      : 'Points activity';
+  } else if (/coupon/i.test(desc)) {
+    item.description = desc.replace(/coupon/gi, 'reward');
+  }
+
+  return item;
+};
 
 // GET /api/leaderboard
 export const getLeaderboard = async (req, res, next) => {
   try {
-    const { scope = 'global', district, limit = 20 } = req.query;
+    const { scope = 'global', district } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const skip = (page - 1) * limit;
 
     const matchFilter = {
       role: 'resident',
       isVerified: true,
     };
 
-    // District-level leaderboard
     if (scope === 'district' && district) {
       matchFilter['location.district'] = new RegExp(district, 'i');
     }
 
-    const topUsers = await User.find(matchFilter)
-      .sort({ totalPointsEarned: -1 })
-      .limit(parseInt(limit))
-      .select('fullName location totalPointsEarned totalWasteScans totalCollections points createdAt');
+    const [users, totalParticipants] = await Promise.all([
+      User.find(matchFilter)
+        .sort({ totalPointsEarned: -1, createdAt: 1 })
+        .skip(skip)
+        .limit(limit)
+        .select('fullName location totalPointsEarned totalWasteScans totalCollections points createdAt'),
+      User.countDocuments(matchFilter),
+    ]);
 
-    // Add rank to each user
-    const leaderboard = topUsers.map((user, index) => ({
-      rank: index + 1,
+    const leaderboard = users.map((user, index) => ({
+      rank: skip + index + 1,
       userId: user._id,
       fullName: user.fullName,
       district: user.location?.district || 'N/A',
       sector: user.location?.sector || 'N/A',
-      totalPointsEarned: user.totalPointsEarned,
-      currentPoints: user.points,
-      totalWasteScans: user.totalWasteScans,
-      totalCollections: user.totalCollections,
+      totalPointsEarned: user.totalPointsEarned || 0,
+      currentPoints: user.points || 0,
+      totalWasteScans: user.totalWasteScans || 0,
+      totalCollections: user.totalCollections || 0,
       memberSince: user.createdAt,
     }));
 
-    // Get current user's rank and stats
     const currentUser = await User.findById(req.user.id).select(
       'fullName location totalPointsEarned totalWasteScans totalCollections points'
     );
@@ -45,16 +66,20 @@ export const getLeaderboard = async (req, res, next) => {
     if (currentUser) {
       const higherCount = await User.countDocuments({
         ...matchFilter,
-        totalPointsEarned: { $gt: currentUser.totalPointsEarned },
+        totalPointsEarned: { $gt: currentUser.totalPointsEarned || 0 },
       });
       myRank = {
         rank: higherCount + 1,
-        totalPointsEarned: currentUser.totalPointsEarned,
-        currentPoints: currentUser.points,
-        totalWasteScans: currentUser.totalWasteScans,
-        totalCollections: currentUser.totalCollections,
+        userId: currentUser._id,
+        fullName: currentUser.fullName,
+        totalPointsEarned: currentUser.totalPointsEarned || 0,
+        currentPoints: currentUser.points || 0,
+        totalWasteScans: currentUser.totalWasteScans || 0,
+        totalCollections: currentUser.totalCollections || 0,
       };
     }
+
+    const totalPages = Math.max(1, Math.ceil(totalParticipants / limit));
 
     res.status(200).json({
       success: true,
@@ -62,7 +87,14 @@ export const getLeaderboard = async (req, res, next) => {
         scope,
         leaderboard,
         myRank,
-        totalParticipants: await User.countDocuments(matchFilter),
+        totalParticipants,
+        pagination: {
+          page,
+          limit,
+          total: totalParticipants,
+          pages: totalPages,
+          hasMore: page < totalPages,
+        },
       },
     });
   } catch (error) {
@@ -81,27 +113,27 @@ export const getMyStats = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Get recent activity from points ledger
-    const recentActivity = await PointsLedger.find({ user: req.user.id })
+    const recentActivityRaw = await PointsLedger.find({ user: req.user.id })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(15)
       .select('points type source description createdAt');
 
-    // Global rank
-    const globalRank = (await User.countDocuments({
-      role: 'resident',
-      isVerified: true,
-      totalPointsEarned: { $gt: user.totalPointsEarned },
-    })) + 1;
+    const recentActivity = recentActivityRaw.map(sanitizeActivity);
 
-    // District rank
+    const globalRank =
+      (await User.countDocuments({
+        role: 'resident',
+        isVerified: true,
+        totalPointsEarned: { $gt: user.totalPointsEarned || 0 },
+      })) + 1;
+
     let districtRank = null;
     if (user.location?.district) {
       const districtHigher = await User.countDocuments({
         role: 'resident',
         isVerified: true,
         'location.district': user.location.district,
-        totalPointsEarned: { $gt: user.totalPointsEarned },
+        totalPointsEarned: { $gt: user.totalPointsEarned || 0 },
       });
       districtRank = districtHigher + 1;
     }
@@ -111,10 +143,10 @@ export const getMyStats = async (req, res, next) => {
       data: {
         fullName: user.fullName,
         location: user.location,
-        currentPoints: user.points,
-        totalPointsEarned: user.totalPointsEarned,
-        totalWasteScans: user.totalWasteScans,
-        totalCollections: user.totalCollections,
+        currentPoints: user.points || 0,
+        totalPointsEarned: user.totalPointsEarned || 0,
+        totalWasteScans: user.totalWasteScans || 0,
+        totalCollections: user.totalCollections || 0,
         globalRank,
         districtRank,
         memberSince: user.createdAt,

@@ -187,33 +187,49 @@ export const getCollectionSchedules = async (req, res, next) => {
     const { district, sector, page = 1, limit = 10 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Optionally use logged-in user's location if no filter provided
-    let locationFilter = {};
-    if (district || sector) {
-      if (district) locationFilter['zone.district'] = new RegExp(district, 'i');
-      if (sector) locationFilter['zone.sector'] = new RegExp(sector, 'i');
-    } else {
-      // Fall back to resident's saved location
+    // Prefer query filters; otherwise use resident profile district
+    let districtFilter = district;
+    let sectorFilter = sector;
+    if (!districtFilter && !sectorFilter) {
       const resident = await User.findById(req.user.id).select('location');
-      if (resident?.location?.district) {
-        locationFilter['zone.district'] = new RegExp(resident.location.district, 'i');
-      }
+      districtFilter = resident?.location?.district || '';
     }
+
+    const locationFilter = {};
+    if (districtFilter) {
+      locationFilter['zone.district'] = new RegExp(`^${districtFilter}$`, 'i');
+    }
+    // Sector is optional refinement: include exact sector matches AND
+    // district-wide schedules (empty / missing sector) so admin district
+    // schedules still appear for residents in any sector.
+    if (sectorFilter) {
+      locationFilter.$or = [
+        { 'zone.sector': new RegExp(`^${sectorFilter}$`, 'i') },
+        { 'zone.sector': { $in: [null, ''] } },
+        { 'zone.sector': { $exists: false } },
+      ];
+    }
+
+    // Start of today so same-day schedules still appear
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
     const filter = {
       ...locationFilter,
       status: { $in: ['upcoming', 'in_progress'] },
-      scheduledDate: { $gte: new Date() },
+      scheduledDate: { $gte: startOfToday },
     };
 
     const [schedules, total] = await Promise.all([
       CollectionSchedule.find(filter)
-        .sort({ scheduledDate: 1 })
+        .sort({ scheduledDate: 1, startTime: 1 })
         .skip(skip)
         .limit(parseInt(limit))
         .populate('collector', 'fullName phone'),
       CollectionSchedule.countDocuments(filter),
     ]);
+
+    const pages = Math.max(1, Math.ceil(total / parseInt(limit)));
 
     res.status(200).json({
       success: true,
@@ -223,7 +239,8 @@ export const getCollectionSchedules = async (req, res, next) => {
           page: parseInt(page),
           limit: parseInt(limit),
           total,
-          pages: Math.ceil(total / parseInt(limit)),
+          pages,
+          totalPages: pages,
         },
       },
     });

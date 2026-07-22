@@ -13,18 +13,29 @@ const collectionScheduleSchema = new mongoose.Schema(
     },
     zone: {
       province: String,
-      district: String,
+      district: { type: String, required: true, index: true },
       sector: String,
       cell: String,
     },
     scheduledDate: {
       type: Date,
       required: true,
+      index: true,
     },
+    /** Coarse slot for filtering */
     timeSlot: {
       type: String,
       enum: ['morning', 'afternoon', 'evening'],
       required: true,
+    },
+    /** Exact clock times shown to residents (HH:mm) */
+    startTime: {
+      type: String,
+      default: '',
+    },
+    endTime: {
+      type: String,
+      default: '',
     },
     wasteTypes: [
       {
@@ -36,9 +47,11 @@ const collectionScheduleSchema = new mongoose.Schema(
       type: String,
       enum: ['upcoming', 'in_progress', 'completed', 'cancelled'],
       default: 'upcoming',
+      index: true,
     },
     notes: {
       type: String,
+      maxlength: 500,
     },
     isRecurring: {
       type: Boolean,
@@ -50,9 +63,16 @@ const collectionScheduleSchema = new mongoose.Schema(
         enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       },
     ],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   { timestamps: true }
 );
+
+collectionScheduleSchema.index({ 'zone.district': 1, scheduledDate: 1, status: 1 });
 
 const CollectionSchedule = mongoose.model('CollectionSchedule', collectionScheduleSchema);
 export default CollectionSchedule;

@@ -81,7 +81,7 @@ export const claimCoupon = async (req, res, next) => {
       coupon.pointsRequired,
       'coupon_claim',
       coupon._id,
-      `Claimed coupon: ${coupon.title}`
+      `Points redeemed for reward: ${coupon.title}`
     );
 
     if (!success) {

@@ -23,6 +23,8 @@ import adminAddressRoutes from './routes/admin/adminAddressRoutes.js';
 import adminReportRoutes from './routes/admin/adminReportRoutes.js';
 import adminCatalogRoutes from './routes/admin/adminCatalogRoutes.js';
 import adminCouponRoutes from './routes/admin/adminCouponRoutes.js';
+import adminBinRoutes from './routes/admin/adminBinRoutes.js';
+import adminScheduleRoutes from './routes/admin/adminScheduleRoutes.js';
 import collectorRoutes from './routes/collectorRoutes.js';
 import recyclingRoutes from './routes/recyclingRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -70,6 +72,8 @@ app.use('/api/admin/address', adminAddressRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
 app.use('/api/admin/catalog', adminCatalogRoutes);
 app.use('/api/admin/coupons', adminCouponRoutes);
+app.use('/api/admin/bins', adminBinRoutes);
+app.use('/api/admin/schedules', adminScheduleRoutes);
 app.use('/api/collector', collectorRoutes);
 
 app.get('/api/health', (req, res) => {

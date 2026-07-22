@@ -168,26 +168,36 @@ export const adjustStock = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-// DELETE /api/admin/catalog/products/:id  (soft)
+// DELETE /api/admin/catalog/products/:id
 export const deleteProduct = async (req, res, next) => {
   try {
-    const activeOrders = await Order.countDocuments({
-      product: req.params.id,
-      status:  { $in: ['pending', 'confirmed', 'processing'] },
-    });
-    if (activeOrders > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete — ${activeOrders} active order(s). Deactivate instead.`,
-      });
-    }
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false, isPublic: false, updatedBy: req.user.id },
-      { new: true }
-    );
+    const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-    res.status(200).json({ success: true, message: 'Product deactivated', data: product });
+
+    // Cancel any open orders so deletion is never blocked
+    const cancelResult = await Order.updateMany(
+      {
+        product: req.params.id,
+        status: { $in: ['pending', 'confirmed', 'processing', 'ready'] },
+      },
+      {
+        $set: {
+          status: 'cancelled',
+          cancelReason: `Product "${product.name}" was deleted by admin`,
+        },
+      }
+    );
+
+    await Product.findByIdAndDelete(req.params.id);
+
+    const cancelled = cancelResult.modifiedCount || 0;
+    res.status(200).json({
+      success: true,
+      message: cancelled > 0
+        ? `Product deleted. ${cancelled} related order(s) were cancelled.`
+        : 'Product deleted permanently',
+      data: { deleted: true, cancelledOrders: cancelled, id: req.params.id },
+    });
   } catch (error) { next(error); }
 };
 

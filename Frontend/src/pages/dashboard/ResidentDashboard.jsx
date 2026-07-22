@@ -6,14 +6,15 @@ import { wasteService } from '@/services/wasteService';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { PointsBadge } from '@/components/ui/Badge';
 import { formatDateWithSlot } from '@/utils/formatters';
+import { cleanActivityText, activityDelta } from '@/components/leaderboard/LeaderboardTable';
 import {
-  ScanLine, Truck, Trophy, Ticket, ClipboardList, CalendarDays, ArrowRight,
+  ScanLine, Truck, Trophy, ClipboardList, CalendarDays, ArrowRight,
 } from 'lucide-react';
 
 const quickActions = [
   { id: 'scan', label: 'Scan Waste', icon: ScanLine, desc: 'Identify & sort waste' },
   { id: 'collection-request', label: 'Request Pickup', icon: Truck, desc: 'Schedule collection' },
-  { id: 'coupons', label: 'Redeem Coupons', icon: Ticket, desc: 'Spend your points' },
+  { id: 'my-requests', label: 'My Requests', icon: ClipboardList, desc: 'Track your pickups' },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, desc: 'See your rank' },
 ];
 
@@ -145,14 +146,17 @@ export function ResidentDashboard({ onNavigate }) {
           </div>
           {recentActivity.length > 0 ? (
             <ul className="space-y-3">
-              {recentActivity.slice(0, 5).map((item, i) => (
-                <li key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600 truncate">{item.description || item.action}</span>
-                  <span className={`font-semibold shrink-0 ml-2 ${item.points > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                    {item.points > 0 ? '+' : ''}{item.points} pts
-                  </span>
-                </li>
-              ))}
+              {recentActivity.slice(0, 5).map((item, i) => {
+                const delta = activityDelta(item);
+                return (
+                  <li key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600 truncate">{cleanActivityText(item.description || item.action)}</span>
+                    <span className={`font-semibold shrink-0 ml-2 ${delta >= 0 ? 'text-green-600' : 'text-slate-500'}`}>
+                      {delta > 0 ? '+' : ''}{delta} pts
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : recentScans.length > 0 ? (
             <ul className="space-y-3">

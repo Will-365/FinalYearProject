@@ -8,10 +8,10 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Skeleton } from '@/app/components/ui/skeleton';
-import { Package, ShoppingBag, Loader2, Recycle } from 'lucide-react';
+import { Package, ShoppingBag, Loader2, Recycle, Trash2 } from 'lucide-react';
 import { Switch } from '@/app/components/ui/switch';
 
 const CATEGORIES = ['recycled_goods', 'compost', 'pavers', 'eco_product', 'voucher'];
@@ -31,9 +31,13 @@ export function AdminProductManagement({ onNavigate }: { onNavigate?: (page: str
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [showLegacy, setShowLegacy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const displayedProducts = showLegacy ? products : products.filter(isFromWaste);
-  const legacyCount = products.filter((p) => !isFromWaste(p)).length;
+  const wasteProducts = products.filter((p) => isFromWaste(p) && p.isActive !== false);
+  const legacyProducts = products.filter((p) => !isFromWaste(p));
+  const displayedProducts = showLegacy ? [...wasteProducts, ...legacyProducts] : wasteProducts;
+  const legacyCount = legacyProducts.length;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -117,6 +121,26 @@ export function AdminProductManagement({ onNavigate }: { onNavigate?: (page: str
     }
   };
 
+  const removeProduct = async () => {
+    if (!deleteTarget?._id) return;
+    setDeleting(true);
+    try {
+      const res = await adminCatalogService.deleteProduct(deleteTarget._id);
+      if (res.success === false) throw new Error(res.message || 'Delete failed');
+      showToast({
+        type: 'success',
+        title: 'Deleted',
+        message: res.message || `${deleteTarget.name} deleted`,
+      });
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      showToast({ type: 'error', title: 'Cannot delete', message: err.message || 'Delete failed' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -190,8 +214,17 @@ export function AdminProductManagement({ onNavigate }: { onNavigate?: (page: str
                     <div className="flex gap-2 mt-2">
                       <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(p)}>Edit</Button>
                       {!isFromWaste(p) && p.isActive && (
-                        <Button variant="outline" size="sm" className="text-red-600" onClick={() => deactivate(p)}>Deactivate</Button>
+                        <Button variant="outline" size="sm" className="text-amber-700" onClick={() => deactivate(p)}>Deactivate</Button>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => setDeleteTarget(p)}
+                        title="Delete product"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -243,6 +276,40 @@ export function AdminProductManagement({ onNavigate }: { onNavigate?: (page: str
             {form.imageUrl && <img src={form.imageUrl} alt="Preview" className="h-32 w-full object-cover rounded-xl" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
             <Button className="w-full bg-green-600 hover:bg-green-700" onClick={save} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Product'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}>
+        <DialogContent className="rounded-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete product?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove <span className="font-semibold text-slate-800">{deleteTarget?.name}</span> from the catalog.
+              Any open orders for this product will be cancelled automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              disabled={deleting}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleting}
+              onClick={removeProduct}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Delete
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

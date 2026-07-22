@@ -1,4 +1,4 @@
-import { ScanLine, Truck, Ticket, Trophy, ClipboardList, CalendarDays, LayoutDashboard, Recycle, ShoppingBag, Leaf, Bell } from 'lucide-react';
+import { ScanLine, Truck, Trophy, ClipboardList, CalendarDays, LayoutDashboard, Recycle, ShoppingBag, Leaf, Bell, Trash2 } from 'lucide-react';
 
 export function ResidentOverview({ onNavigate }) {
   const modules = [
@@ -35,20 +35,20 @@ export function ResidentOverview({ onNavigate }) {
       iconColor: 'text-purple-600',
     },
     {
+      id: 'bin-status',
+      title: 'Bin Status',
+      description: 'Report how full your bin is and its urgency',
+      icon: Trash2,
+      color: 'bg-amber-100',
+      iconColor: 'text-amber-700',
+    },
+    {
       id: 'schedules',
       title: 'Collection Schedules',
       description: 'Upcoming pickups in your district',
       icon: CalendarDays,
       color: 'bg-orange-100',
       iconColor: 'text-orange-600',
-    },
-    {
-      id: 'coupons',
-      title: 'Coupons & Rewards',
-      description: 'Redeem points for partner discounts',
-      icon: Ticket,
-      color: 'bg-yellow-100',
-      iconColor: 'text-yellow-600',
     },
     {
       id: 'leaderboard',
@@ -97,7 +97,7 @@ export function ResidentOverview({ onNavigate }) {
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">GreenCare Rwanda</h1>
         <p className="text-sm text-slate-600">
-          Smart waste management — scan, collect, earn points, and redeem rewards.
+          Smart waste management — scan, collect, earn points, and track your impact.
         </p>
       </div>
 

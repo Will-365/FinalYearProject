@@ -34,4 +34,10 @@ export const collectionService = {
 
   getSchedule: (id) =>
     api.get(`/collection/schedule/${id}`).then((r) => extractData(r)),
+
+  reportBinStatus: (payload) =>
+    api.post('/collection/bin-status', payload).then((r) => r.data),
+
+  getMyBinStatus: () =>
+    api.get('/collection/bin-status/me').then((r) => extractData(r)),
 };

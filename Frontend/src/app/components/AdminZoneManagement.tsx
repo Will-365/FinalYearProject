@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { adminAddressService, adminCollectorService } from '@/services/adminService';
 import { useToast } from '@/hooks/useToast';
 import { AddressNodeModal } from '@/app/components/admin/AddressNodeModal';
-import { ChevronDown, ChevronRight, MapPin, Plus, UserCheck, Pencil, Eye } from 'lucide-react';
+import { AdminCollectionSchedules } from '@/app/components/admin/AdminCollectionSchedules';
+import { ChevronDown, ChevronRight, MapPin, Plus, UserCheck, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/app/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 
 const PROVINCES = ['Kigali City', 'Northern Province', 'Southern Province', 'Eastern Province', 'Western Province'];
 
@@ -113,40 +115,56 @@ export function AdminZoneManagement() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#0d1f13]">Zone Management</h2>
-          <p className="text-sm text-gray-500">Address hierarchy and collection schedules</p>
+          <h2 className="text-2xl font-bold text-[#0d1f13]">Zones & Routes</h2>
+          <p className="text-sm text-gray-500">Manage address zones and district collection schedules</p>
         </div>
-        <Button className="bg-green-600" onClick={() => { setEditNode(null); setParentContext({ level: 'district', province }); setModalOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" /> Add Location
-        </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {PROVINCES.map((p) => (
-          <button key={p} type="button" onClick={() => setProvince(p)} className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${province === p ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{p.replace(' Province', '')}</button>
-        ))}
-      </div>
+      <Tabs defaultValue="schedules" className="space-y-4">
+        <TabsList className="rounded-xl">
+          <TabsTrigger value="schedules">Collection Schedules</TabsTrigger>
+          <TabsTrigger value="zones">Address Zones</TabsTrigger>
+        </TabsList>
 
-      <Card className="rounded-2xl border-gray-100 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600" />{province} · {districts.length} districts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-2">{[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-          ) : districts.length === 0 ? (
-            <div className="py-16 text-center">
-              <MapPin className="h-10 w-10 mx-auto text-gray-300 mb-2" />
-              <p className="font-medium">No zones configured yet</p>
-              <Button variant="link" onClick={() => { setParentContext({ level: 'district', province }); setModalOpen(true); }}>Add Province →</Button>
-            </div>
-          ) : (
-            districts.map((d: any, i: number) => (
-              <TreeNode key={d._id || d.name || i} node={d} onAdd={handleAdd} onEdit={(n: any) => { setEditNode(n); setModalOpen(true); }} onAssign={(n: any) => { setAssignNode(n); setSelectedCollector(''); }} />
-            ))
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="schedules" className="mt-2">
+          <AdminCollectionSchedules />
+        </TabsContent>
+
+        <TabsContent value="zones" className="mt-2 space-y-4">
+          <div className="flex justify-end">
+            <Button className="bg-green-600" onClick={() => { setEditNode(null); setParentContext({ level: 'district', province }); setModalOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" /> Add Location
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {PROVINCES.map((p) => (
+              <button key={p} type="button" onClick={() => setProvince(p)} className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all ${province === p ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{p.replace(' Province', '')}</button>
+            ))}
+          </div>
+
+          <Card className="rounded-2xl border-gray-100 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4 text-green-600" />{province} · {districts.length} districts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-2">{[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+              ) : districts.length === 0 ? (
+                <div className="py-16 text-center">
+                  <MapPin className="h-10 w-10 mx-auto text-gray-300 mb-2" />
+                  <p className="font-medium">No zones configured yet</p>
+                  <Button variant="link" onClick={() => { setParentContext({ level: 'district', province }); setModalOpen(true); }}>Add Province →</Button>
+                </div>
+              ) : (
+                districts.map((d: any, i: number) => (
+                  <TreeNode key={d._id || d.name || i} node={d} onAdd={handleAdd} onEdit={(n: any) => { setEditNode(n); setModalOpen(true); }} onAssign={(n: any) => { setAssignNode(n); setSelectedCollector(''); }} />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <AddressNodeModal open={modalOpen} onClose={() => { setModalOpen(false); setEditNode(null); }} parentContext={parentContext} editNode={editNode} onSuccess={loadTree} />
       <Dialog open={Boolean(assignNode)} onOpenChange={() => setAssignNode(null)}>

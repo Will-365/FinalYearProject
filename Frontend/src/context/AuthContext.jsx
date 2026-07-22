@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   clearAuthStorage,
@@ -12,6 +12,15 @@ import { adminAuthService } from '@/services/adminService';
 import { buyerService } from '@/services/buyerService';
 
 export const AuthContext = createContext(null);
+
+/** Keep useAuth in this module so HMR cannot desync Provider vs hook contexts. */
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return ctx;
+}
 
 export function AuthProvider({ children, onSessionExpired }) {
   const [user, setUser] = useState(null);

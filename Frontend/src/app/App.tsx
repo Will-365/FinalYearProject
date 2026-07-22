@@ -7,6 +7,7 @@ import { Overview } from '@/app/components/Overview';
 import { Dashboard } from '@/app/components/Dashboard';
 import { AdminDashboard } from '@/app/components/AdminDashboard';
 import { AdminCollectionManagement } from '@/app/components/AdminCollectionManagement';
+import { AdminBinStatusManagement } from '@/app/components/AdminBinStatusManagement';
 import { CollectionManagement } from '@/app/components/CollectionManagement';
 import { AdminCollectorManagement } from '@/app/components/AdminCollectorManagement';
 import { AdminZoneManagement } from '@/app/components/AdminZoneManagement';
@@ -24,8 +25,8 @@ import { Button } from '@/app/components/ui/button';
 import {
   Recycle, LayoutDashboard, Truck, Package, User, LogOut,
   Users, TrendingUp, Link2, Home, Shield, Smartphone, Gift, UserCheck,
-  MapPin, FileText, ScanLine, ClipboardList, CalendarDays, Trophy, Ticket, Bell,
-  Leaf, ShoppingBag, Recycle as RecycleIcon,
+  MapPin, FileText, ScanLine, ClipboardList, CalendarDays, Trophy, Bell,
+  Leaf, ShoppingBag, Recycle as RecycleIcon, Trash2,
 } from 'lucide-react';
 import { GreenCareLogo } from '@/app/components/ui/GreenCareLogo';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/app/components/ui/sheet';
@@ -38,7 +39,7 @@ import { ScanPage } from '@/pages/scan/ScanPage';
 import { CollectionRequestPage } from '@/pages/collection/CollectionRequestPage';
 import { MyRequestsPage } from '@/pages/collection/MyRequestsPage';
 import { SchedulesPage } from '@/pages/collection/SchedulesPage';
-import { CouponsPage } from '@/pages/coupons/CouponsPage';
+import { BinStatusPage } from '@/pages/collection/BinStatusPage';
 import { LeaderboardPage } from '@/pages/leaderboard/LeaderboardPage';
 import { ResidentDashboard } from '@/pages/dashboard/ResidentDashboard';
 import { ResidentOverview } from '@/pages/dashboard/ResidentOverview';
@@ -92,6 +93,9 @@ function AppContent() {
       if (user?.role === 'buyer' && currentPage === 'overview') {
         setCurrentPage('shop');
       }
+      if (user?.role === 'resident' && currentPage === 'coupons') {
+        setCurrentPage('overview');
+      }
     } else if (wasAuthenticated.current && !isLoading) {
       setShowLogin(true);
       wasAuthenticated.current = false;
@@ -127,6 +131,7 @@ function AppContent() {
     { id: 'overview', label: 'Overview', icon: Home },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'collection', label: 'Collections', icon: Truck },
+    { id: 'bin-status', label: 'Bin Status', icon: Trash2 },
     { id: 'collectors', label: 'Collectors', icon: UserCheck },
     { id: 'zones', label: 'Zones & Routes', icon: MapPin },
     { id: 'pipeline', label: 'Waste Pipeline', icon: RecycleIcon },
@@ -143,10 +148,10 @@ function AppContent() {
     { id: 'scan', label: 'Waste Scanner', icon: ScanLine },
     { id: 'collection-request', label: 'Request Pickup', icon: Truck },
     { id: 'my-requests', label: 'My Requests', icon: ClipboardList },
+    { id: 'bin-status', label: 'Bin Status', icon: Trash2 },
     { id: 'schedules', label: 'Schedules', icon: CalendarDays },
     { id: 'recycling', label: 'Recycling Centers', icon: RecycleIcon },
     { id: 'products', label: 'Eco Shop', icon: ShoppingBag },
-    { id: 'coupons', label: 'Coupons', icon: Ticket },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
     { id: 'environment', label: 'My Impact', icon: Leaf },
     { id: 'notifications', label: 'Messages', icon: Bell },
@@ -202,16 +207,17 @@ function AppContent() {
             <MyRequestsPage onNavigate={handleNavigate} />
           </ProtectedRoute>
         );
+      case 'bin-status':
+        if (userRole === 'admin') return <AdminBinStatusManagement />;
+        return (
+          <ProtectedRoute allowedRoles={['resident']}>
+            <BinStatusPage onNavigate={handleNavigate} />
+          </ProtectedRoute>
+        );
       case 'schedules':
         return (
           <ProtectedRoute allowedRoles={['resident']}>
             <SchedulesPage onNavigate={handleNavigate} />
-          </ProtectedRoute>
-        );
-      case 'coupons':
-        return (
-          <ProtectedRoute allowedRoles={['resident']}>
-            <CouponsPage />
           </ProtectedRoute>
         );
       case 'leaderboard':
@@ -463,7 +469,7 @@ function AppContent() {
 
         <AppNavbar onMenuOpen={() => setMobileMenuOpen(true)} onLogout={handleLogout} />
 
-        <main className="flex-1 overflow-auto p-4 lg:p-8">
+        <main className={`flex-1 min-h-0 p-4 lg:p-6 ${currentPage === 'profile' ? 'overflow-hidden' : 'overflow-auto'}`}>
           {renderPage()}
         </main>
       </div>

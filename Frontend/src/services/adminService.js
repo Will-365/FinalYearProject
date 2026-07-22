@@ -44,6 +44,19 @@ export const adminCouponService = {
   getRecentGrants: () => api.get('/admin/coupons/grants').then(unwrap),
 };
 
+export const adminBinService = {
+  getSummary: (params = {}) => api.get('/admin/bins/summary', { params }).then(unwrap),
+  getAll: (params = {}) => api.get('/admin/bins', { params }).then(unwrap),
+  getById: (id) => api.get(`/admin/bins/${id}`).then(unwrap),
+};
+
+export const adminScheduleService = {
+  getAll: (params = {}) => api.get('/admin/schedules', { params }).then(unwrap),
+  create: (data) => api.post('/admin/schedules', data).then(unwrap),
+  update: (id, data) => api.put(`/admin/schedules/${id}`, data).then(unwrap),
+  remove: (id) => api.delete(`/admin/schedules/${id}`).then(unwrap),
+};
+
 export const adminWasteIntakeService = {
   getAnalytics: (params = {}) => api.get('/admin/waste-intake/analytics', { params }).then(unwrap),
   getTurningAdvisory: (params = {}) => api.get('/admin/waste-intake/turning-advisory', { params }).then(unwrap),

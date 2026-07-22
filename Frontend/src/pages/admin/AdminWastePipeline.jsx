@@ -410,8 +410,8 @@ export function AdminWastePipeline() {
     const totalKg = cards.reduce((s, b) => s + (b.weightKg || 0), 0);
 
     return (
-      <div className="flex-shrink-0 w-[272px] bg-gray-50/80 rounded-2xl border border-gray-200 shadow-sm flex flex-col h-[calc(100vh-22rem)]">
-        <div className="p-4 border-b border-gray-100 bg-white rounded-t-2xl flex items-center justify-between shadow-sm">
+      <div className="flex-shrink-0 w-[272px] bg-gray-50/80 rounded-2xl border border-gray-200 shadow-sm flex flex-col min-h-[26rem] h-[26rem]">
+        <div className="p-4 border-b border-gray-100 bg-white rounded-t-2xl flex items-center justify-between shadow-sm shrink-0">
           <div className="flex items-center gap-2">
             <div className={`p-1.5 ${meta.bg} rounded-lg border ${meta.border}`}>
               <Icon className={`h-4 w-4 ${meta.text}`} />
@@ -424,9 +424,9 @@ export function AdminWastePipeline() {
           <span className={`${meta.badge} text-xs font-bold px-2.5 py-1 rounded-full`}>{cards.length}</span>
         </div>
 
-        <div className="p-3 overflow-y-auto flex-1 space-y-3 custom-scrollbar">
+        <div className="p-3 overflow-y-auto flex-1 min-h-0 space-y-3 custom-scrollbar">
           {cards.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 py-8">
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 py-10">
               <div className={`h-10 w-10 ${meta.bg} rounded-full border ${meta.border} flex items-center justify-center mb-2`}>
                 <Icon className={`h-5 w-5 ${meta.text}`} />
               </div>
@@ -450,7 +450,7 @@ export function AdminWastePipeline() {
   const mixedTotal  = mixedOrgKg + mixedRecKg;
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
+    <div className="space-y-4 pb-6">
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -461,21 +461,21 @@ export function AdminWastePipeline() {
       `}</style>
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Waste Pipeline</h1>
           <p className="text-sm text-gray-500">Track waste from reception to finished products</p>
         </div>
         <Button
           onClick={() => setStartModal(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-100 font-semibold px-5"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-100 font-semibold px-5 shrink-0"
         >
           <Plus className="h-4 w-4 mr-2" /> Start Batch
         </Button>
       </div>
 
       {/* ── Stockpile cards ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { key:'organic',    label:'Organic Stock',    icon: Leaf,         accentBg:'bg-green-50',   accentBorder:'border-green-100',  accentText:'text-green-600',  sub: `${availableKg('organic').toFixed(1)} kg available` },
           { key:'recyclable', label:'Plastic Stock',    icon: Recycle,      accentBg:'bg-blue-50',    accentBorder:'border-blue-100',   accentText:'text-blue-600',   sub: `${availableKg('recyclable').toFixed(1)} kg available` },
@@ -488,18 +488,18 @@ export function AdminWastePipeline() {
             key === 'active'     ? totalActive :
                                    totalConverted;
           return (
-            <div key={key} className={`bg-white rounded-2xl border ${accentBorder} p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden`}>
-              <div className={`absolute top-0 right-0 w-24 h-24 ${accentBg} rounded-bl-full pointer-events-none opacity-50`} />
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`p-2 ${accentBg} rounded-xl`}><Icon className={`h-4 w-4 ${accentText}`} /></div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</span>
+            <div key={key} className={`bg-white rounded-2xl border ${accentBorder} p-4 shadow-sm hover:shadow-md transition-all relative overflow-hidden`}>
+              <div className={`absolute top-0 right-0 w-20 h-20 ${accentBg} rounded-bl-full pointer-events-none opacity-50`} />
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className={`p-1.5 ${accentBg} rounded-lg`}><Icon className={`h-4 w-4 ${accentText}`} /></div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">{label}</span>
               </div>
               {loadingStock && key !== 'active' && key !== 'converted' ? (
-                <div className="h-8 w-24 bg-gray-100 animate-pulse rounded-lg mt-1" />
+                <div className="h-7 w-20 bg-gray-100 animate-pulse rounded-lg mt-1" />
               ) : (
                 <>
-                  <p className="text-3xl font-black text-gray-900">{val}</p>
-                  <p className={`text-xs font-semibold mt-1 ${accentText}`}>{sub}</p>
+                  <p className="text-2xl font-black text-gray-900">{val}</p>
+                  <p className={`text-[11px] font-semibold mt-0.5 ${accentText}`}>{sub}</p>
                 </>
               )}
             </div>
@@ -530,13 +530,13 @@ export function AdminWastePipeline() {
         ))}
       </div>
 
-      {/* ── Turning weather (organic pipeline) ─────────────────────────── */}
+      {/* ── Turning weather (organic pipeline) — compact so board stays visible */}
       {activeTab === 'organic' && (
-        <TurningWeatherWidget defaultDistrict="Gasabo" />
+        <TurningWeatherWidget compact defaultDistrict="Gasabo" />
       )}
 
       {/* ── Stage progress legend ────────────────────────────────────────── */}
-      <div className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-2xl px-5 py-3 shadow-sm overflow-x-auto">
+      <div className="flex items-center gap-1.5 bg-white border border-gray-100 rounded-2xl px-4 py-2.5 shadow-sm overflow-x-auto">
         <span className="text-xs font-semibold text-gray-400 mr-2 shrink-0">
           {currentCfg.emoji} {currentCfg.label}:
         </span>
@@ -556,11 +556,11 @@ export function AdminWastePipeline() {
 
       {/* ── Kanban board ─────────────────────────────────────────────────── */}
       {loadingStock ? (
-        <div className="flex items-center justify-center h-48">
+        <div className="flex items-center justify-center min-h-[26rem] rounded-2xl border border-dashed border-gray-200 bg-white">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 pt-1 flex-1 horizontal-scrollbar px-1">
+        <div className="flex gap-4 overflow-x-auto pb-2 pt-1 horizontal-scrollbar px-1 min-h-[26rem]">
           {currentCfg.stages.map(stage => (
             <PipelineColumn key={stage} stage={stage} pipelineCategory={activeTab} />
           ))}

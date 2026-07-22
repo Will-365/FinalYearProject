@@ -63,9 +63,41 @@ export const fileToBase64 = (file) =>
     reader.readAsDataURL(file);
   });
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 export const validateImageFile = (file) => {
   if (!file) return 'Please select an image';
-  if (!file.type.startsWith('image/')) return 'File must be an image (JPEG, PNG, or WebP)';
-  if (file.size > 5 * 1024 * 1024) return 'Image must be under 5MB';
+  const type = (file.type || '').toLowerCase();
+  if (!type.startsWith('image/')) return 'File must be an image (JPEG, PNG, or WebP)';
+  if (!ALLOWED_IMAGE_TYPES.includes(type) && type !== 'image/jpg') {
+    return 'Only JPEG, PNG, WebP, or GIF images are allowed';
+  }
+  if (file.size <= 0) return 'Image file is empty — please try again';
+  if (file.size > MAX_IMAGE_BYTES) return 'Image must be under 5MB';
   return null;
+};
+
+/** Short success beep via Web Audio API (no audio file needed). */
+export const playSuccessBeep = () => {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1175, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+    osc.onended = () => ctx.close().catch(() => {});
+  } catch {
+    // Audio may be blocked; ignore
+  }
 };

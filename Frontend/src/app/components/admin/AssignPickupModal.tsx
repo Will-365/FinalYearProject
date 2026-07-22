@@ -8,7 +8,7 @@ import { Badge } from '@/app/components/ui/badge';
 import { adminCollectorService, adminCollectionService } from '@/services/adminService';
 import { useToast } from '@/hooks/useToast';
 import { vehicleEmoji, collectorStatusDot } from '@/utils/adminHelpers';
-import { Truck, Layers } from 'lucide-react';
+import { Truck, UserCheck } from 'lucide-react';
 
 interface AssignPickupModalProps {
   open: boolean;
@@ -29,6 +29,9 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
   const [collectorTasks, setCollectorTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
 
+  const currentCollectorId = (req: any) =>
+    String(req?.collector?._id || req?.collector?.id || req?.collector || '');
+
   useEffect(() => {
     if (!open || !requestId) return;
     setLoading(true);
@@ -43,15 +46,22 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
         setRequest(reqData);
         const all = colRes.success ? colRes.data?.collectors || colRes.data?.items || [] : [];
         const district = reqData?.location?.district?.toLowerCase();
+        const assignedId = currentCollectorId(reqData);
         const sorted = [...all]
           .filter((c) => c.isActive !== false && c.collectorStatus !== 'offline')
           .sort((a, b) => {
+            const aId = String(a._id || a.id);
+            const bId = String(b._id || b.id);
+            const aBusy = (a.activeAssignments ?? 0) > 0 && aId !== assignedId;
+            const bBusy = (b.activeAssignments ?? 0) > 0 && bId !== assignedId;
+            if (aBusy !== bBusy) return aBusy ? 1 : -1;
             const aMatch = a.collectorZone?.district?.toLowerCase() === district ? 0 : 1;
             const bMatch = b.collectorZone?.district?.toLowerCase() === district ? 0 : 1;
             if (aMatch !== bMatch) return aMatch - bMatch;
             return (a.activeAssignments ?? 0) - (b.activeAssignments ?? 0);
           });
         setCollectors(sorted);
+        if (assignedId) setSelectedId(assignedId);
       })
       .catch(() => { setCollectors([]); setRequest(null); })
       .finally(() => setLoading(false));
@@ -68,15 +78,33 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
       .then((res) => {
         const list = res.data?.requests || res.data?.items || res.requests || [];
         setCollectorTasks(
-          list.filter((r) => ['assigned', 'in_progress'].includes(r.status) && (r._id || r.id) !== requestId)
+          list.filter((r: any) => ['assigned', 'in_progress'].includes(r.status) && (r._id || r.id) !== requestId)
         );
       })
       .catch(() => setCollectorTasks([]))
       .finally(() => setLoadingTasks(false));
   }, [selectedId, requestId]);
 
+  const isCollectorBusy = (c: any) => {
+    const id = String(c._id || c.id);
+    const active = c.activeAssignments ?? 0;
+    const assignedId = currentCollectorId(request);
+    // Already on this pickup only — allow re-select / keep assignment
+    if (assignedId && id === assignedId && active <= 1) return false;
+    return active > 0;
+  };
+
   const submit = async () => {
     if (!requestId || !selectedId) return;
+    const chosen = collectors.find((c) => String(c._id || c.id) === selectedId);
+    if (chosen && isCollectorBusy(chosen)) {
+      showToast({
+        type: 'error',
+        title: 'Collector busy',
+        message: `${chosen.fullName} already has an active assignment. Release them first.`,
+      });
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await adminCollectionService.assign(requestId, {
@@ -86,13 +114,10 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
       });
       if (res.success !== false) {
         const name = collectors.find((c) => (c._id || c.id) === selectedId)?.fullName || 'collector';
-        const active = res.data?.activeAssignments;
         showToast({
           type: 'success',
           title: 'Assigned',
-          message: active > 1
-            ? `✅ ${name} now has ${active} active pickups (including this one)`
-            : `✅ Assigned to ${name} — they have been notified`,
+          message: `✅ Assigned to ${name} — they have been notified`,
         });
         onSuccess();
         onClose();
@@ -107,6 +132,7 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
   };
 
   const selected = collectors.find((c) => (c._id || c.id) === selectedId);
+  const availableCount = collectors.filter((c) => !isCollectorBusy(c)).length;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -119,41 +145,62 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
         </DialogHeader>
 
         <div className="rounded-xl bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-800 flex items-start gap-2">
-          <Layers className="h-4 w-4 shrink-0 mt-0.5" />
-          Collectors can receive multiple pickups at once — active task count is shown for each.
+          <UserCheck className="h-4 w-4 shrink-0 mt-0.5" />
+          A collector can only have one active pickup at a time. Busy collectors must complete, cancel, or be unassigned before taking another.
         </div>
 
         {loading ? (
           <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}</div>
         ) : collectors.length === 0 ? (
           <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-xl">⚠️ No available collectors — all may be offline or none exist yet</p>
+        ) : availableCount === 0 ? (
+          <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-xl">
+            ⚠️ All collectors are busy on another pickup. Unassign or wait until one is released.
+          </p>
         ) : (
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {collectors.map((c) => {
-              const id = c._id || c.id;
+              const id = String(c._id || c.id);
               const isSelected = selectedId === id;
               const zoneMatch = c.collectorZone?.district?.toLowerCase() === request?.location?.district?.toLowerCase();
               const active = c.activeAssignments ?? 0;
+              const busy = isCollectorBusy(c);
               return (
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setSelectedId(id)}
-                  className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${isSelected ? 'border-green-600 bg-green-50' : 'border-gray-100 hover:border-green-200'}`}
+                  disabled={busy}
+                  onClick={() => !busy && setSelectedId(id)}
+                  className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                    busy
+                      ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                      : isSelected
+                        ? 'border-green-600 bg-green-50'
+                        : 'border-gray-100 hover:border-green-200'
+                  }`}
                 >
                   <span className="text-xl">{vehicleEmoji(c.vehicleType)}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`h-2 w-2 rounded-full ${collectorStatusDot(c.collectorStatus)}`} />
                       <span className="font-semibold text-sm truncate">{c.fullName}</span>
-                      {zoneMatch && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Same district</span>}
-                      {active > 0 && (
-                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">
-                          <Truck className="h-3 w-3 mr-0.5" />{active} active
-                        </Badge>
+                      {zoneMatch && !busy && (
+                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Same district</span>
                       )}
+                      {busy ? (
+                        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-800 border-amber-200">
+                          <Truck className="h-3 w-3 mr-0.5" />Busy — {active} active
+                        </Badge>
+                      ) : active > 0 ? (
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-800 border-green-200">
+                          On this pickup
+                        </Badge>
+                      ) : null}
                     </div>
-                    <p className="text-xs text-gray-500">{c.collectorZone?.district || 'No zone'} · {c.collectorStatus?.replace('_', ' ')}</p>
+                    <p className="text-xs text-gray-500">
+                      {c.collectorZone?.district || 'No zone'} · {c.collectorStatus?.replace('_', ' ')}
+                      {busy ? ' · finish current job to free them' : ''}
+                    </p>
                   </div>
                 </button>
               );
@@ -161,13 +208,13 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
           </div>
         )}
 
-        {selectedId && (
+        {selectedId && selected && !isCollectorBusy(selected) && (
           <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm">
             <p className="font-semibold text-gray-800 mb-1">{selected?.fullName}&apos;s current queue</p>
             {loadingTasks ? (
               <p className="text-xs text-gray-500">Loading active pickups…</p>
             ) : collectorTasks.length === 0 ? (
-              <p className="text-xs text-gray-500">No other active pickups — this will be their first task.</p>
+              <p className="text-xs text-gray-500">No other active pickups — available to assign.</p>
             ) : (
               <ul className="space-y-1 text-xs text-gray-600">
                 {collectorTasks.map((t) => (
@@ -193,7 +240,12 @@ export function AssignPickupModal({ open, onClose, requestId, onSuccess }: Assig
         </div>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold">Cancel</button>
-          <button type="button" disabled={!selectedId || submitting} onClick={submit} className="flex-1 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+          <button
+            type="button"
+            disabled={!selectedId || submitting || (selected ? isCollectorBusy(selected) : false)}
+            onClick={submit}
+            className="flex-1 rounded-xl bg-green-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          >
             {submitting ? 'Assigning…' : 'Assign & Notify'}
           </button>
         </div>

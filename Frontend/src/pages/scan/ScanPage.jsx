@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppToast } from '@/hooks/useAppToast';
 import { wasteService } from '@/services/wasteService';
-import { fileToBase64 } from '@/utils/formatters';
+import { fileToBase64, playSuccessBeep, validateImageFile } from '@/utils/formatters';
 import { ScanUploader, ScanLoader } from '@/components/waste/ScanUploader';
 import { ScanResult } from '@/components/waste/ScanResult';
 import { ScanHistoryCard } from '@/components/waste/ScanHistoryCard';
@@ -12,7 +12,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 
 export function ScanPage({ onNavigate }) {
-  const { user, setCollectionPrefill } = useAuth();
+  const { setCollectionPrefill } = useAuth();
   const { success, error } = useAppToast();
   const [tab, setTab] = useState('scan');
   const [preview, setPreview] = useState(null);
@@ -29,7 +29,12 @@ export function ScanPage({ onNavigate }) {
     try {
       const data = await wasteService.getHistory(page, 10);
       setHistory(data.scans || data.items || data || []);
-      setHistoryPages(data.pagination?.totalPages || data.totalPages || 1);
+      setHistoryPages(
+        data.pagination?.totalPages ||
+        data.pagination?.pages ||
+        data.totalPages ||
+        1
+      );
       setHistoryPage(page);
     } catch (err) {
       error(err.message);
@@ -42,24 +47,49 @@ export function ScanPage({ onNavigate }) {
     if (tab === 'history') loadHistory(1);
   }, [tab]);
 
-  const handleScan = async () => {
-    if (!preview?.file) {
+  const runScan = async (previewData) => {
+    const source = previewData || preview;
+    if (!source?.file) {
       setFieldError('Please capture or upload an image first');
       return;
     }
+
+    const validationError = validateImageFile(source.file);
+    if (validationError) {
+      setFieldError(validationError);
+      error(validationError);
+      return;
+    }
+
     setFieldError('');
     setScanning(true);
     setResult(null);
     try {
-      const base64 = await fileToBase64(preview.file);
-      const data = await wasteService.scan(base64, preview.mimeType);
+      const base64 = await fileToBase64(source.file);
+      if (!base64 || typeof base64 !== 'string') {
+        throw new Error('Could not read the image. Please try again.');
+      }
+      const data = await wasteService.scan(base64, source.mimeType || source.file.type || 'image/jpeg');
+      if (!data || (!data.wasteType && !data.scanId && !data._id)) {
+        throw new Error('Scan returned no result. Please try a clearer photo.');
+      }
       setResult(data);
-      success('Waste scanned! Request a collection to earn points. 🌿');
+      playSuccessBeep();
+      success('Waste scanned successfully! Request a collection to earn points. 🌿');
     } catch (err) {
       error(err.message || 'Scan failed. Please try a clearer image.');
     } finally {
       setScanning(false);
     }
+  };
+
+  const handleScan = () => runScan(preview);
+
+  const handleCameraAutoScan = (capturedPreview) => {
+    setPreview(capturedPreview);
+    setResult(null);
+    setFieldError('');
+    runScan(capturedPreview);
   };
 
   const handleRequestCollection = (scanData) => {
@@ -86,18 +116,20 @@ export function ScanPage({ onNavigate }) {
         <TabsContent value="scan" className="mt-6 space-y-6">
           <ScanUploader
             preview={preview}
+            scanning={scanning}
             onPreviewChange={(p) => {
               setPreview(p);
               setResult(null);
               setFieldError('');
             }}
+            onAutoScan={handleCameraAutoScan}
             onError={(msg) => {
-              setFieldError(msg);
-              error(msg);
+              setFieldError(msg || '');
+              if (msg) error(msg);
             }}
           />
           {fieldError && (
-            <p className="text-sm text-red-600">{fieldError}</p>
+            <p className="text-sm text-red-600" role="alert">{fieldError}</p>
           )}
 
           {scanning ? (

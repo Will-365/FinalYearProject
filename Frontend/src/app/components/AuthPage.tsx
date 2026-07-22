@@ -164,16 +164,18 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => (
 );
 
 const Inp = ({ label, name, type = 'text', placeholder, value, onChange, error, prefix, onBlur }:
-  { label: string; name: string; type?: string; placeholder: string; value: string; onChange: (v: string) => void; error?: string; prefix?: string; onBlur?: () => void }) => (
+  { label: string; name: string; type?: string; placeholder: string; value: string; onChange: (v: string) => void; error?: string; prefix?: string; onBlur?: (value: string) => void }) => (
   <div style={{ marginBottom: 16 }}>
     <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>{label}</label>
     <div style={{ position: 'relative' }}>
       {prefix && <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: '0.9rem', color: '#6b7280', fontWeight: 500 }}>{prefix}</span>}
-      <input type={type} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}
-        style={{...inpSx(error, false), paddingLeft: prefix ? '50px' : '14px'}} onFocus={e => { if (!error) { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.12)'; }}}
-        onBlur={(e) => { e.currentTarget.style.borderColor = error ? '#ef4444' : '#e5e7eb'; e.currentTarget.style.boxShadow = error ? '0 0 0 3px rgba(239,68,68,0.1)' : 'none'; if(onBlur) onBlur(); }} />
+      <input type={type} name={name} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)}
+        aria-invalid={!!error} aria-describedby={error ? `${name}-error` : undefined}
+        style={{...inpSx(error, false), paddingLeft: prefix ? '50px' : '14px'}}
+        onFocus={e => { if (!error) { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.12)'; }}}
+        onBlur={(e) => { if (onBlur) onBlur(e.target.value); }} />
     </div>
-    {error && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 4, margin: '4px 0 0 0' }}>{error}</p>}
+    {error && <p id={`${name}-error`} role="alert" style={{ color: '#ef4444', fontSize: '0.75rem', margin: '4px 0 0 0' }}>{error}</p>}
   </div>
 );
 
@@ -219,56 +221,108 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
     password: '', confirmPassword: '', agreeToTerms: false,
     province: '', district: '', sector: '', cell: '', village: '', streetAddress: ''
   });
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const provinces = Object.keys(rwandaLocations);
   const districts = formData.province ? Object.keys(rwandaLocations[formData.province] || {}) : [];
   const sectors = formData.district ? Object.keys(rwandaLocations[formData.province]?.[formData.district] || {}) : [];
   const cells = formData.sector ? (rwandaLocations[formData.province]?.[formData.district]?.[formData.sector] || []) : [];
 
-  const updateField = (field: keyof FormData, value: string | boolean | AccountRole) => {
-    setFormData(p => ({ ...p, [field]: value }));
-    if (apiError) setApiError(null);
-    if (errors[field]) setErrors(p => { const n = { ...p }; delete n[field]; return n; });
+  const getFieldError = (field: string, val: string | boolean, passwordForConfirm = formData.password): string => {
+    if (field === 'fullName') {
+      const name = (val as string) || '';
+      if (!name.trim()) return 'Full name is required';
+      if (name.trim().length < 2) return 'Full name must be at least 2 characters';
+      if (name.trim().length > 60) return 'Full name must be at most 60 characters';
+      if (/[0-9]/.test(name)) return 'Full name must not contain numbers';
+      if (/[^a-zA-Z\s'\-.àáâãäåèéêëìíîïòóôõöùúûüýÿÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝ]/.test(name)) return 'Full name contains invalid characters';
+    }
+    if (field === 'email') {
+      const email = ((val as string) || '').trim();
+      if (!email) return 'Email is required';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Please enter a valid email address';
+    }
+    if (field === 'phone') {
+      const phone = ((val as string) || '').replace(/[\s\-()]/g, '');
+      if (!phone) return 'Phone number is required';
+      if (!phone.startsWith('+250')) return 'Phone number must start with +250';
+      // Exact format matching backend: +250XXXXXXXXX (9 digits after country code)
+      if (!/^\+250[0-9]{9}$/.test(phone)) {
+        return 'Enter a valid number e.g. +250792397681';
+      }
+    }
+    if (field === 'nationalId') {
+      const id = ((val as string) || '').replace(/\s/g, '');
+      if (!id) return 'National ID is required';
+      if (!/^[13][0-9]{15}$/.test(id)) return 'National ID must be 16 digits starting with 1 or 3';
+    }
+    if (field === 'password') {
+      const pass = (val as string) || '';
+      if (!pass) return 'Password is required';
+      if (pass.length < 8) return 'Password must be at least 8 characters';
+      if (!/[a-z]/.test(pass)) return 'Password must include a lowercase letter';
+      if (!/[A-Z]/.test(pass)) return 'Password must include an uppercase letter';
+      if (!/\d/.test(pass)) return 'Password must include a number';
+      if (!/[@$!%*?&]/.test(pass)) return 'Password must include a special character (@$!%*?&)';
+    }
+    if (field === 'confirmPassword') {
+      const confirm = (val as string) || '';
+      if (!confirm) return 'Please confirm your password';
+      if (confirm !== passwordForConfirm) return 'Passwords do not match';
+    }
+    if (field === 'agreeToTerms' && !val) return 'You must accept the terms to continue';
+    return '';
   };
 
-  const validateField = (field: string, val: string | boolean) => {
-    let error = '';
-    if (field === 'fullName') {
-      const name = val as string;
-      if (!name || name.trim().length < 2) error = 'Full name must be at least 2 characters';
-      else if (name.trim().length > 60) error = 'Full name must be at most 60 characters';
-      else if (/[0-9]/.test(name)) error = 'Full name must not contain numbers';
-      else if (/[^a-zA-Z\s'\-.àáâãäåèéêëìíîïòóôõöùúûüýÿÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝ]/.test(name)) error = 'Full name contains invalid characters';
-    }
-    if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val as string)) error = 'Please enter a valid email address';
-    if (field === 'phone') {
-      const phone = (val as string).trim();
-      // Accept: +250XXXXXXXXX OR 0XXXXXXXXX OR 9-digit local (7XXXXXXXX)
-      if (!/^(\+250[0-9]{9}|0[0-9]{9}|[0-9]{9})$/.test(phone)) error = 'Enter a valid Rwandan number e.g. 0792397681 or +250792397681';
-    }
-    if (field === 'nationalId' && !/^[13][0-9]{15}$/.test((val as string).replace(/\s/g, ''))) error = 'National ID must be 16 digits starting with 1 or 3';
-    if (field === 'password' && (val as string).length < 8) error = 'Password must be at least 8 characters';
-    if (field === 'confirmPassword' && val !== formData.password) error = 'Passwords do not match';
-    if (field === 'agreeToTerms' && !val) error = 'You must accept the terms to continue';
-    
-    if (error) {
-      setErrors(prev => ({ ...prev, [field]: error }));
-    } else {
-      setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
-    }
+  const validateField = (field: string, val: string | boolean, passwordForConfirm = formData.password) => {
+    const error = getFieldError(field, val, passwordForConfirm);
+    setErrors(prev => {
+      if (error) return { ...prev, [field]: error };
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
     return error === '';
   };
 
-  const handleBlur = (field: keyof FormData) => {
-    validateField(field, formData[field]);
+  const handleBlur = (field: keyof FormData, value?: string | boolean) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const val = value !== undefined ? value : formData[field];
+    validateField(field, val as string | boolean);
+  };
+
+  const updateField = (field: keyof FormData, value: string | boolean | AccountRole) => {
+    setFormData(p => {
+      const next = { ...p, [field]: value };
+      return next;
+    });
+    if (apiError) setApiError(null);
+
+    // Keep showing / updating errors once the user has left the field (or after Continue)
+    if (touched[field] || errors[field]) {
+      if (field === 'password') {
+        const pass = value as string;
+        validateField('password', pass);
+        if (touched.confirmPassword || errors.confirmPassword) {
+          validateField('confirmPassword', formData.confirmPassword, pass);
+        }
+      } else if (field === 'confirmPassword') {
+        validateField('confirmPassword', value as string);
+      } else if (field !== 'role') {
+        validateField(field, value as string | boolean);
+      } else if (errors.role) {
+        setErrors(prev => { const n = { ...prev }; delete n.role; return n; });
+      }
+    }
   };
 
   const getPasswordStrength = (pass: string) => {
     let score = 0;
     if (pass.length >= 8) score++;
-    if (/[A-Z]/.test(pass)) score++;
+    if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) score++;
     if (/[0-9]/.test(pass)) score++;
-    if (/[!@#$%^&*]/.test(pass)) score++;
+    if (/[@$!%*?&]/.test(pass)) score++;
     return score;
   };
   
@@ -276,6 +330,11 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
 
   const validateStep2 = () => {
     const fields = ['fullName', 'email', 'phone', 'nationalId', 'password', 'confirmPassword', 'agreeToTerms'] as const;
+    setTouched(prev => {
+      const next = { ...prev };
+      fields.forEach(f => { next[f] = true; });
+      return next;
+    });
     let isValid = true;
     fields.forEach(f => {
       if (!validateField(f, formData[f])) isValid = false;
@@ -316,9 +375,12 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
         province: formData.province, district: formData.district, sector: formData.sector,
         cell: formData.cell, village: formData.village, street: formData.streetAddress
       };
+
+      // Backend requires +250XXXXXXXXX (spaces already stripped by validation)
+      const phone = formData.phone.replace(/[\s\-()]/g, '');
       
       const res = await authService.register({
-        fullName: formData.fullName, email: formData.email, phone: formData.phone,
+        fullName: formData.fullName, email: formData.email, phone,
         nationalId: formData.nationalId.replace(/\s/g, ''), password: formData.password,
         role: formData.role, location
       });
@@ -551,14 +613,14 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
                     const cleaned = v.replace(/[0-9]/g, '');
                     if (cleaned.length <= 60) updateField('fullName', cleaned);
                   }}
-                  error={errors.fullName} onBlur={() => handleBlur('fullName')} />
+                  error={errors.fullName} onBlur={(v) => handleBlur('fullName', v)} />
               </div>
               <div style={{ gridColumn: 'span 2' }}>
                 <Inp label="Email Address" name="email" type="email" placeholder="your@email.com" value={formData.email}
-                  onChange={v => updateField('email', v)} error={errors.email} onBlur={() => handleBlur('email')} />
+                  onChange={v => updateField('email', v)} error={errors.email} onBlur={(v) => handleBlur('email', v)} />
               </div>
-              <Inp label="Phone Number" name="phone" type="tel" placeholder="e.g. 0792397681" value={formData.phone}
-                onChange={v => updateField('phone', v)} error={errors.phone} onBlur={() => handleBlur('phone')} />
+              <Inp label="Phone Number" name="phone" type="tel" placeholder="e.g. +250792397681" value={formData.phone}
+                onChange={v => updateField('phone', v)} error={errors.phone} onBlur={(v) => handleBlur('phone', v)} />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151' }}>National ID Number</label>
@@ -573,15 +635,16 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
                     )}
                   </div>
                 </div>
-                <input type="text" placeholder="1 XXXX X XXXXXXX X XX" value={formData.nationalId}
+                <input type="text" name="nationalId" placeholder="1 XXXX X XXXXXXX X XX" value={formData.nationalId}
                   onChange={e => updateField('nationalId', e.target.value)} style={inpSx(errors.nationalId)}
+                  aria-invalid={!!errors.nationalId}
                   onFocus={e => { if (!errors.nationalId) { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.1)'; }}}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = errors.nationalId ? '#ef4444' : '#e5e7eb'; e.currentTarget.style.boxShadow = errors.nationalId ? '0 0 0 3px rgba(239,68,68,0.1)' : 'none'; handleBlur('nationalId'); }} />
-                {errors.nationalId && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 4, margin: '4px 0 0 0' }}>{errors.nationalId}</p>}
+                  onBlur={(e) => handleBlur('nationalId', e.target.value)} />
+                {errors.nationalId && <p role="alert" style={{ color: '#ef4444', fontSize: '0.75rem', margin: '4px 0 0 0' }}>{errors.nationalId}</p>}
               </div>
               <div style={{ position: 'relative', gridColumn: 'span 2' }}>
                 <Inp label="Password" name="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={formData.password}
-                  onChange={v => updateField('password', v)} error={errors.password} onBlur={() => handleBlur('password')} />
+                  onChange={v => updateField('password', v)} error={errors.password} onBlur={(v) => handleBlur('password', v)} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   style={{ position: 'absolute', right: 14, top: 34, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>
                   {showPassword ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
@@ -607,7 +670,7 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
               </div>
               <div style={{ position: 'relative', gridColumn: 'span 2' }}>
                 <Inp label="Confirm Password" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="••••••••" value={formData.confirmPassword} onChange={v => updateField('confirmPassword', v)} error={errors.confirmPassword} onBlur={() => handleBlur('confirmPassword')} />
+                  placeholder="••••••••" value={formData.confirmPassword} onChange={v => updateField('confirmPassword', v)} error={errors.confirmPassword} onBlur={(v) => handleBlur('confirmPassword', v)} />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   style={{ position: 'absolute', right: 14, top: 34, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>
                   {showConfirmPassword ? <EyeOff style={{ width: 18, height: 18 }} /> : <Eye style={{ width: 18, height: 18 }} />}
@@ -642,11 +705,11 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
             <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: 28 }}>This helps us connect you with local collectors</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <Sel label="Province" value={formData.province} onChange={v => { updateField('province', v); setFormData(p => ({ ...p, province: v, district: '', sector: '', cell: '', village: '' })); }}
-                options={provinces} placeholder="Select Province" error={errors.province} onBlur={() => { if(!formData.province) setErrors(p => ({...p, province: 'Please select your province'})); }} />
+                options={provinces} placeholder="Select Province" error={errors.province} onBlur={() => { setTouched(p => ({ ...p, province: true })); if (!formData.province) setErrors(p => ({ ...p, province: 'Please select your province' })); }} />
               <Sel label="District" value={formData.district} onChange={v => { updateField('district', v); setFormData(p => ({ ...p, district: v, sector: '', cell: '', village: '' })); }}
-                options={districts} disabled={!formData.province} placeholder="Select District" error={errors.district} onBlur={() => { if(!formData.district) setErrors(p => ({...p, district: 'Please select your district'})); }} />
+                options={districts} disabled={!formData.province} placeholder="Select District" error={errors.district} onBlur={() => { setTouched(p => ({ ...p, district: true })); if (!formData.district) setErrors(p => ({ ...p, district: 'Please select your district' })); }} />
               <Sel label="Sector" value={formData.sector} onChange={v => { updateField('sector', v); setFormData(p => ({ ...p, sector: v, cell: '', village: '' })); }}
-                options={sectors} disabled={!formData.district} placeholder="Select Sector" error={errors.sector} onBlur={() => { if(!formData.sector) setErrors(p => ({...p, sector: 'Please select your sector'})); }} />
+                options={sectors} disabled={!formData.district} placeholder="Select Sector" error={errors.sector} onBlur={() => { setTouched(p => ({ ...p, sector: true })); if (!formData.sector) setErrors(p => ({ ...p, sector: 'Please select your sector' })); }} />
               <Sel label="Cell" value={formData.cell} onChange={v => { updateField('cell', v); setFormData(p => ({ ...p, cell: v, village: '' })); }}
                 options={cells} disabled={!formData.sector} placeholder="Select Cell" />
               <div style={{ gridColumn: 'span 2' }}>

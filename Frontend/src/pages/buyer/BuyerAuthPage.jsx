@@ -19,15 +19,70 @@ export function BuyerAuthPage({ onSuccess }) {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
-  const validatePhone = (p) => /^(\+250|250|07|08)\d{8,9}$/.test(p.replace(/\s/g, ''));
+  const validatePhone = (p) => /^\+250[0-9]{9}$/.test(p.replace(/[\s\-()]/g, ''));
+
+  const getFieldError = (name, value, extra = {}) => {
+    if (name === 'fullName') {
+      if (!String(value || '').trim()) return 'Full name is required';
+    }
+    if (name === 'phone') {
+      const cleaned = String(value || '').replace(/[\s\-()]/g, '');
+      if (!cleaned) return 'Phone is required';
+      if (!cleaned.startsWith('+250')) return 'Phone number must start with +250';
+      if (!validatePhone(value)) return 'Enter a valid number e.g. +250792397681';
+    }
+    if (name === 'password') {
+      if (!value) return 'Password is required';
+      if (String(value).length < 6) return 'Password must be at least 6 characters';
+    }
+    if (name === 'confirmPassword') {
+      if (!value) return 'Please confirm your password';
+      if (value !== (extra.password ?? password)) return 'Passwords do not match';
+    }
+    if (name === 'otp') {
+      if (!value || String(value).length !== 6) return 'Enter the 6-digit OTP';
+    }
+    if (name === 'newPassword') {
+      if (!value || String(value).length < 6) return 'Password must be at least 6 characters';
+    }
+    return '';
+  };
+
+  const setFieldError = (name, message) => {
+    setErrors(prev => {
+      if (message) return { ...prev, [name]: message };
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const handleFieldBlur = (name, value, extra) => {
+    setTouched(prev => ({ ...prev, [name]: true }));
+    setFieldError(name, getFieldError(name, value, extra));
+  };
+
+  const handleFieldChange = (name, value, setter) => {
+    setter(value);
+    if (touched[name] || errors[name]) {
+      setFieldError(name, getFieldError(name, value, name === 'confirmPassword' ? { password } : undefined));
+    }
+    if (name === 'password' && (touched.confirmPassword || errors.confirmPassword)) {
+      setFieldError('confirmPassword', getFieldError('confirmPassword', confirmPassword, { password: value }));
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     const errs = {};
-    if (!phone) errs.phone = 'Phone is required';
-    else if (!validatePhone(phone)) errs.phone = 'Enter a valid Rwandan phone number (+250XXXXXXXXX)';
-    if (!password) errs.password = 'Password is required';
+    const phoneErr = getFieldError('phone', phone);
+    const passwordErr = getFieldError('password', password);
+    if (phoneErr) errs.phone = phoneErr;
+    if (passwordErr) errs.password = passwordErr;
+    setTouched(prev => ({ ...prev, phone: true, password: true }));
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setLoading(true);
@@ -45,11 +100,15 @@ export function BuyerAuthPage({ onSuccess }) {
   const handleRegister = async (e) => {
     e.preventDefault();
     const errs = {};
-    if (!fullName.trim()) errs.fullName = 'Full name is required';
-    if (!phone) errs.phone = 'Phone is required';
-    else if (!validatePhone(phone)) errs.phone = 'Enter a valid Rwandan phone number (+250XXXXXXXXX)';
-    if (!password || password.length < 6) errs.password = 'Password must be at least 6 characters';
-    if (password !== confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    const fullNameErr = getFieldError('fullName', fullName);
+    const phoneErr = getFieldError('phone', phone);
+    const passwordErr = getFieldError('password', password);
+    const confirmErr = getFieldError('confirmPassword', confirmPassword);
+    if (fullNameErr) errs.fullName = fullNameErr;
+    if (phoneErr) errs.phone = phoneErr;
+    if (passwordErr) errs.password = passwordErr;
+    if (confirmErr) errs.confirmPassword = confirmErr;
+    setTouched(prev => ({ ...prev, fullName: true, phone: true, password: true, confirmPassword: true }));
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setLoading(true);
@@ -69,7 +128,9 @@ export function BuyerAuthPage({ onSuccess }) {
 
   const handleForgot = async (e) => {
     e.preventDefault();
-    if (!phone) { setErrors({ phone: 'Enter your phone number' }); return; }
+    const phoneErr = getFieldError('phone', phone);
+    setTouched(prev => ({ ...prev, phone: true }));
+    if (phoneErr) { setErrors({ phone: phoneErr }); return; }
     setLoading(true);
     try {
       await buyerService.forgotPassword({ phone });
@@ -85,8 +146,11 @@ export function BuyerAuthPage({ onSuccess }) {
   const handleReset = async (e) => {
     e.preventDefault();
     const errs = {};
-    if (!otp || otp.length !== 6) errs.otp = 'Enter the 6-digit OTP';
-    if (!newPassword || newPassword.length < 6) errs.newPassword = 'Password must be at least 6 characters';
+    const otpErr = getFieldError('otp', otp);
+    const newPasswordErr = getFieldError('newPassword', newPassword);
+    if (otpErr) errs.otp = otpErr;
+    if (newPasswordErr) errs.newPassword = newPasswordErr;
+    setTouched(prev => ({ ...prev, otp: true, newPassword: true }));
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setLoading(true);
@@ -110,7 +174,7 @@ export function BuyerAuthPage({ onSuccess }) {
         {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />}
         {children}
       </div>
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="text-xs text-red-500 mt-1" role="alert">{error}</p>}
     </div>
   );
 
@@ -137,7 +201,8 @@ export function BuyerAuthPage({ onSuccess }) {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
+                  onChange={e => handleFieldChange('phone', e.target.value, setPhone)}
+                  onBlur={e => handleFieldBlur('phone', e.target.value)}
                   placeholder="+250 7XX XXX XXX"
                   className={inputClass(true, errors.phone)}
                 />
@@ -146,7 +211,8 @@ export function BuyerAuthPage({ onSuccess }) {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={e => handleFieldChange('password', e.target.value, setPassword)}
+                  onBlur={e => handleFieldBlur('password', e.target.value)}
                   placeholder="Enter password"
                   className={inputClass(true, errors.password) + ' pr-10'}
                 />
@@ -175,16 +241,22 @@ export function BuyerAuthPage({ onSuccess }) {
             <form onSubmit={handleRegister} className="space-y-4">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Create Account</h2>
               <Field label="Full Name" icon={User} error={errors.fullName}>
-                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
+                <input type="text" value={fullName}
+                  onChange={e => handleFieldChange('fullName', e.target.value, setFullName)}
+                  onBlur={e => handleFieldBlur('fullName', e.target.value)}
                   placeholder="Your full name" className={inputClass(true, errors.fullName)} />
               </Field>
               <Field label="Phone Number" icon={Phone} error={errors.phone}>
-                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                <input type="tel" value={phone}
+                  onChange={e => handleFieldChange('phone', e.target.value, setPhone)}
+                  onBlur={e => handleFieldBlur('phone', e.target.value)}
                   placeholder="+250 7XX XXX XXX" className={inputClass(true, errors.phone)} />
               </Field>
               <Field label="Password" icon={Lock} error={errors.password}>
                 <input type={showPassword ? 'text' : 'password'} value={password}
-                  onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters"
+                  onChange={e => handleFieldChange('password', e.target.value, setPassword)}
+                  onBlur={e => handleFieldBlur('password', e.target.value)}
+                  placeholder="Min 6 characters"
                   className={inputClass(true, errors.password) + ' pr-10'} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -192,7 +264,9 @@ export function BuyerAuthPage({ onSuccess }) {
                 </button>
               </Field>
               <Field label="Confirm Password" icon={Lock} error={errors.confirmPassword}>
-                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                <input type="password" value={confirmPassword}
+                  onChange={e => handleFieldChange('confirmPassword', e.target.value, setConfirmPassword)}
+                  onBlur={e => handleFieldBlur('confirmPassword', e.target.value)}
                   placeholder="Repeat password" className={inputClass(true, errors.confirmPassword)} />
               </Field>
               <div>
@@ -226,7 +300,9 @@ export function BuyerAuthPage({ onSuccess }) {
               <h2 className="text-xl font-bold text-gray-900 mb-2">Reset Password</h2>
               <p className="text-sm text-gray-500">We'll send an OTP to your phone.</p>
               <Field label="Phone Number" icon={Phone} error={errors.phone}>
-                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                <input type="tel" value={phone}
+                  onChange={e => handleFieldChange('phone', e.target.value, setPhone)}
+                  onBlur={e => handleFieldBlur('phone', e.target.value)}
                   placeholder="+250 7XX XXX XXX" className={inputClass(true, errors.phone)} />
               </Field>
               <button type="submit" disabled={loading}
@@ -247,12 +323,16 @@ export function BuyerAuthPage({ onSuccess }) {
                 <p className="text-sm text-gray-500 mt-1">Sent to {phone}</p>
               </div>
               <Field label="6-Digit OTP" error={errors.otp}>
-                <input type="text" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                <input type="text" value={otp}
+                  onChange={e => handleFieldChange('otp', e.target.value.replace(/\D/g, '').slice(0, 6), setOtp)}
+                  onBlur={e => handleFieldBlur('otp', e.target.value)}
                   placeholder="000000" className={inputClass(false, errors.otp) + ' text-center text-xl font-bold tracking-[0.5em]'} />
               </Field>
               <Field label="New Password" icon={Lock} error={errors.newPassword}>
                 <input type={showPassword ? 'text' : 'password'} value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)} placeholder="New password"
+                  onChange={e => handleFieldChange('newPassword', e.target.value, setNewPassword)}
+                  onBlur={e => handleFieldBlur('newPassword', e.target.value)}
+                  placeholder="New password"
                   className={inputClass(true, errors.newPassword)} />
               </Field>
               <button type="submit" disabled={loading}

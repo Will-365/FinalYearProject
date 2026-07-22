@@ -102,6 +102,15 @@ export const scanWaste = async (req, res, next) => {
 
     // Strip data URI prefix if frontend sends it
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    if (!base64Data.trim()) {
+      return res.status(400).json({ success: false, message: 'Image data is empty' });
+    }
+
+    // Approximate decoded size (base64 is ~4/3 of binary)
+    const approxBytes = Math.ceil((base64Data.length * 3) / 4);
+    if (approxBytes > 5 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: 'Image must be under 5MB' });
+    }
 
     // Call Gemini
     const { parsed, raw } = await analyzeImageWithGemini(base64Data, resolvedMime);

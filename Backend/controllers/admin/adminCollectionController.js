@@ -139,7 +139,21 @@ export const assignPickup = async (req, res, next) => {
       });
     }
 
+    // One active pickup per collector — must be released (completed/cancelled/unassigned) first
+    const otherActive = await CollectionRequest.countDocuments({
+      collector: collectorId,
+      status: { $in: ['assigned', 'in_progress'] },
+      _id: { $ne: request._id },
+    });
+    if (otherActive > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `${collector.fullName} already has an active assignment. Release them (complete, cancel, or unassign) before assigning another pickup.`,
+      });
+    }
+
     const wasAlreadyAssigned = String(request.collector) === String(collectorId);
+    const previousCollectorId = request.collector ? String(request.collector) : null;
     request.collector    = collectorId;
     request.status       = 'assigned';
     request.assignedAt   = new Date();
@@ -151,6 +165,17 @@ export const assignPickup = async (req, res, next) => {
       await User.findByIdAndUpdate(collectorId, { collectorStatus: 'on_route' });
     }
 
+    // If reassigning to a different collector, free the previous one when they have no other active jobs
+    if (previousCollectorId && previousCollectorId !== String(collectorId)) {
+      const remaining = await CollectionRequest.countDocuments({
+        collector: previousCollectorId,
+        status: { $in: ['assigned', 'in_progress'] },
+      });
+      if (remaining === 0) {
+        await User.findByIdAndUpdate(previousCollectorId, { collectorStatus: 'available' });
+      }
+    }
+
     const totalActive = await CollectionRequest.countDocuments({
       collector: collectorId,
       status: { $in: ['assigned', 'in_progress'] },
@@ -159,8 +184,8 @@ export const assignPickup = async (req, res, next) => {
     await createNotification({
       userId:  collectorId,
       type:    'assignment',
-      title:   totalActive > 1 ? 'Additional pickup assigned' : 'New pickup assigned',
-      message: `Pickup in ${request.location?.district || 'your zone'}: ${request.quantity} ${request.wasteType} waste. You now have ${totalActive} active task${totalActive > 1 ? 's' : ''}. Preferred: ${new Date(request.preferredDate).toLocaleDateString('en-RW')} ${request.preferredTimeSlot}.`,
+      title:   'New pickup assigned',
+      message: `Pickup in ${request.location?.district || 'your zone'}: ${request.quantity} ${request.wasteType} waste. Preferred: ${new Date(request.preferredDate).toLocaleDateString('en-RW')} ${request.preferredTimeSlot}.`,
       relatedId: request._id, relatedModel: 'CollectionRequest',
     });
 
@@ -170,9 +195,7 @@ export const assignPickup = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: totalActive > 1
-        ? `Pickup assigned to ${collector.fullName} (${totalActive} active tasks)`
-        : `Pickup assigned to ${collector.fullName}`,
+      message: `Pickup assigned to ${collector.fullName}`,
       data: { request: populated, activeAssignments: totalActive, wasReassignment: wasAlreadyAssigned },
     });
   } catch (error) { next(error); }

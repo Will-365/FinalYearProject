@@ -10,6 +10,7 @@ import { AdminCollectionManagement } from '@/app/components/AdminCollectionManag
 import { AdminBinStatusManagement } from '@/app/components/AdminBinStatusManagement';
 import { CollectionManagement } from '@/app/components/CollectionManagement';
 import { AdminCollectorManagement } from '@/app/components/AdminCollectorManagement';
+import { AdminResidentManagement } from '@/app/components/AdminResidentManagement';
 import { AdminZoneManagement } from '@/app/components/AdminZoneManagement';
 import { RecyclingModule } from '@/app/components/RecyclingModule';
 import { UserProfile } from '@/app/components/UserProfile';
@@ -133,6 +134,7 @@ function AppContent() {
     { id: 'collection', label: 'Collections', icon: Truck },
     { id: 'bin-status', label: 'Bin Status', icon: Trash2 },
     { id: 'collectors', label: 'Collectors', icon: UserCheck },
+    { id: 'residents', label: 'Residents', icon: Users },
     { id: 'zones', label: 'Zones & Routes', icon: MapPin },
     { id: 'pipeline', label: 'Waste Pipeline', icon: RecycleIcon },
     { id: 'recycling', label: 'Recycling Center', icon: Package },
@@ -238,6 +240,8 @@ function AppContent() {
         return <CollectionManagement userRole={userRole} />;
       case 'collectors':
         return <AdminCollectorManagement />;
+      case 'residents':
+        return <AdminResidentManagement />;
       case 'zones':
         return <AdminZoneManagement />;
       case 'pipeline':

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Recycle, Home, Truck, Building2, Check, Eye, EyeOff, ChevronLeft, Info, AlertTriangle, Leaf, Recycle as RecycleIcon, Users } from 'lucide-react';
+import { Recycle, Home, Check, Eye, EyeOff, ChevronLeft, Info, AlertTriangle, Leaf, Recycle as RecycleIcon, Users } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { useToast } from '@/hooks/useToast';
 import { GreenCareLogo } from '@/app/components/ui/GreenCareLogo';
@@ -12,7 +12,7 @@ interface AuthPageProps {
   onBuyerClick?: () => void;
 }
 
-type AccountRole = 'resident' | 'collector' | 'business' | null;
+type AccountRole = 'resident' | null;
 
 interface FormData {
   role: AccountRole;
@@ -113,8 +113,6 @@ const rwandaLocations: Record<string, Record<string, Record<string, string[]>>> 
 
 const roleOptions = [
   { id: 'resident', icon: Home, title: 'Resident', subtitle: 'Schedule pickups and earn recycling rewards' },
-  { id: 'collector', icon: Truck, title: 'Waste Collector', subtitle: 'Manage routes and track collection jobs' },
-  { id: 'business', icon: Building2, title: 'Business / Organisation', subtitle: 'Manage waste compliance and reporting' }
 ] as const;
 
 const trustBullets = [
@@ -217,7 +215,7 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState<FormData>({
-    role: null, fullName: '', email: '', phone: '', nationalId: '',
+    role: 'resident', fullName: '', email: '', phone: '', nationalId: '',
     password: '', confirmPassword: '', agreeToTerms: false,
     province: '', district: '', sector: '', cell: '', village: '', streetAddress: ''
   });
@@ -559,8 +557,8 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
 
         {currentStep === 1 && (
           <div style={{ animation: 'fadeIn 0.2s ease' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0d1f13', marginBottom: 8 }}>How will you use GreenCare?</h2>
-            <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: 28 }}>Choose your account type</p>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0d1f13', marginBottom: 8 }}>Create your resident account</h2>
+            <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: 28 }}>Collectors and organisations are set up by GreenCare admins</p>
             {errors.role && <div style={{ fontSize: '0.75rem', color: '#ef4444', marginBottom: 12 }}>{errors.role}</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {roleOptions.map(r => {
@@ -591,13 +589,6 @@ export function AuthPage({ onLogin, onBackToHome, onShowLogin }: AuthPageProps) 
               border: 'none', borderRadius: 8, fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', marginTop: 32 }}>
               Continue
             </button>
-            <div style={{ marginTop: 24, textAlign: 'center' }}>
-              <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: 8 }}>Looking to buy recycled products?</p>
-              <button onClick={() => onBuyerClick && onBuyerClick()} style={{ width: '100%', padding: 14, background: '#f0fdf4', color: '#16a34a',
-                border: '1.5px solid #16a34a', borderRadius: 8, fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}>
-                Join as a Buyer
-              </button>
-            </div>
           </div>
         )}
 

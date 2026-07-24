@@ -104,6 +104,42 @@ export function AdminWastePipeline() {
   const [convertData, setConvertData]   = useState({ ...CONVERT_DEFAULT, isExisting: true, selectedProductId: '' });
   const [converting, setConverting]     = useState(false);
   const [products, setProducts]         = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  // ── Catalog products for "Add to Existing" ───────────────────────────────
+  const fetchProducts = useCallback(async () => {
+    setLoadingProducts(true);
+    try {
+      const res = await adminCatalogService.getProducts({ limit: 100 });
+      const list = res?.success
+        ? (res.data?.products || [])
+        : (res?.products || res?.data?.products || []);
+      const items = Array.isArray(list) ? list : [];
+      // Company output line: compost / fertiliser + pavers only
+      const companyProducts = items.filter((p) => {
+        if (p.isActive === false) return false;
+        const cat = String(p.category || '').toLowerCase();
+        const name = String(p.name || '').toLowerCase();
+        const isPaver = cat === 'pavers' || name.includes('paver');
+        const isFertiliser =
+          cat === 'compost' ||
+          name.includes('compost') ||
+          name.includes('fertilis') ||
+          name.includes('fertiliz');
+        return isPaver || isFertiliser;
+      });
+      setProducts(companyProducts);
+    } catch {
+      setProducts([]);
+      toast.error('Could not load products for conversion');
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (convertModal.open) fetchProducts();
+  }, [convertModal.open, fetchProducts]);
 
   // ── Stockpile ─────────────────────────────────────────────────────────────
   const fetchStockpile = useCallback(async () => {
@@ -262,7 +298,7 @@ export function AdminWastePipeline() {
           await adminWasteIntakeService.advanceStage(intakeId, { stage: 'packaging' }).catch(() => {});
         }
         await adminCatalogService.adjustStock(convertData.selectedProductId, {
-          quantity: Number(convertData.stock),
+          adjustment: Number(convertData.stock),
           reason: `Converted from Batch ${convertModal.batch.id}`,
         });
         
@@ -785,14 +821,34 @@ export function AdminWastePipeline() {
               <>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select Product *</label>
-                  <select required value={convertData.selectedProductId} onChange={e => setConvertData({ ...convertData, selectedProductId: e.target.value })} className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-white">
-                    <option value="">Select an existing product...</option>
+                  <select
+                    required
+                    value={convertData.selectedProductId}
+                    onChange={e => setConvertData({ ...convertData, selectedProductId: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-white"
+                    disabled={loadingProducts}
+                  >
+                    <option value="">
+                      {loadingProducts
+                        ? 'Loading products…'
+                        : products.length === 0
+                          ? 'No products found — create one first'
+                          : 'Select an existing product…'}
+                    </option>
                     {products.map(p => (
                       <option key={p._id || p.id} value={p._id || p.id}>
-                        {p.name} ({p.category}) - Current Stock: {p.stock}
+                        {p.name}
+                        {p.category ? ` (${String(p.category).replace(/_/g, ' ')})` : ''}
+                        {' — stock: '}
+                        {p.stock ?? 0}
                       </option>
                     ))}
                   </select>
+                  {!loadingProducts && products.length === 0 && (
+                    <p className="text-xs text-amber-700">
+                      No Pavers or Compost/Fertiliser products found. Create them under Eco Products (category: pavers or compost), or use <strong>Create New</strong>.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Quantity to Add (kg/units) *</label>
@@ -815,12 +871,8 @@ export function AdminWastePipeline() {
                     <label className="text-sm font-medium">Category *</label>
                     <select required value={convertData.category} onChange={e => setConvertData({ ...convertData, category: e.target.value })} className="w-full h-10 rounded-xl border border-input px-3 text-sm bg-white">
                       <option value="">Select...</option>
-                      <option value="compost">Compost</option>
-                      <option value="fertiliser">Fertiliser</option>
+                      <option value="compost">Compost / Fertiliser</option>
                       <option value="pavers">Pavers</option>
-                      <option value="recycled_goods">Recycled Goods</option>
-                      <option value="plastic_product">Plastic Product</option>
-                      <option value="eco_product">Eco Product</option>
                     </select>
                   </div>
                   <div className="space-y-2">

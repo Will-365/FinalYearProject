@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Check, Eye, EyeOff, ChevronLeft, AlertTriangle, Shield, Leaf } from 'lucide-react';
+import { Check, Eye, EyeOff, ChevronLeft, AlertTriangle, Leaf } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
@@ -31,7 +31,6 @@ export function LoginPage({ onBackToHome, onShowSignup }: LoginPageProps) {
 
   const { login: authLogin, adminLogin } = useAuth();
   const { showToast } = useToast();
-  const [adminMode, setAdminMode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,12 +45,18 @@ export function LoginPage({ onBackToHome, onShowSignup }: LoginPageProps) {
     setNeedsVerification(false);
     
     try {
-      if (adminMode) {
-        await adminLogin(email, password);
-        showToast({ type: 'success', title: 'Welcome, Admin', message: 'Admin portal access granted' });
-      } else {
+      try {
         const res = await authLogin(email, password);
         showToast({ type: 'success', title: 'Welcome back!', message: `Welcome back, ${res.fullName}!` });
+      } catch (userErr: any) {
+        if (userErr.needsVerification) throw userErr;
+        // Silent admin fallback (no public Admin Portal link)
+        try {
+          await adminLogin(email, password);
+          showToast({ type: 'success', title: 'Welcome back!', message: 'Signed in successfully' });
+        } catch {
+          throw userErr;
+        }
       }
     } catch (err: any) {
       if (err.needsVerification) {
@@ -373,26 +378,12 @@ export function LoginPage({ onBackToHome, onShowSignup }: LoginPageProps) {
                   fontSize: '1.85rem', fontWeight: 900, color: '#0d1f13',
                   marginBottom: 8, letterSpacing: '-0.03em',
                 }}>
-                  {adminMode ? 'Admin Portal' : 'Welcome back'}
+                  Welcome back
                 </h2>
                 <p style={{ fontSize: '0.9rem', color: '#9ca3af', margin: 0 }}>
-                  {adminMode ? 'Sign in with administrator credentials' : 'Sign in to your GreenCare account'}
+                  Sign in to your GreenCare account
                 </p>
               </div>
-
-              {adminMode && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-                  borderRadius: 12, padding: '14px 18px', marginBottom: 24,
-                  display: 'flex', gap: 10, alignItems: 'center',
-                  border: '1px solid rgba(74,222,128,0.2)',
-                }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(74,222,128,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Shield style={{ color: '#4ade80', width: 16, height: 16 }} />
-                  </div>
-                  <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>Restricted access — operations &amp; compliance staff only</span>
-                </div>
-              )}
 
               {apiError && (
                 <div style={{
@@ -498,42 +489,13 @@ export function LoginPage({ onBackToHome, onShowSignup }: LoginPageProps) {
                       animation: 'spin 0.8s linear infinite',
                     }} />
                   )}
-                  {isLoading ? 'Signing in...' : adminMode ? 'Sign In as Admin' : 'Sign In'}
+                  {isLoading ? 'Signing in...' : 'Sign In'}
                 </button>
               </form>
 
-              {/* Divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
-                <div style={{ flex: 1, height: 1, background: '#f3f4f6' }} />
-                <span style={{ fontSize: '0.75rem', color: '#d1d5db', fontWeight: 500 }}>OR</span>
-                <div style={{ flex: 1, height: 1, background: '#f3f4f6' }} />
-              </div>
-
-              {/* Admin toggle */}
-              <div style={{ textAlign: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => { setAdminMode(!adminMode); setApiError(null); setNeedsVerification(false); }}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    fontSize: '0.83rem',
-                    color: adminMode ? '#6b7280' : '#374151',
-                    fontWeight: 600,
-                    background: adminMode ? 'none' : '#f8fafc',
-                    border: adminMode ? 'none' : '1px solid #e5e7eb',
-                    cursor: 'pointer', padding: adminMode ? 0 : '9px 18px',
-                    borderRadius: 10, fontFamily: 'Inter, sans-serif',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {!adminMode && <Shield style={{ width: 15, height: 15, color: '#64748b' }} />}
-                  {adminMode ? '← Back to resident login' : 'Admin Portal'}
-                </button>
-              </div>
-
               {/* Sign up link */}
               {onShowSignup && (
-                <p style={{ textAlign: 'center', marginTop: 24, fontSize: '0.85rem', color: '#9ca3af' }}>
+                <p style={{ textAlign: 'center', marginTop: 28, fontSize: '0.85rem', color: '#9ca3af' }}>
                   Don&apos;t have an account?{' '}
                   <button type="button" onClick={onShowSignup} style={{
                     color: '#16a34a', fontWeight: 700, background: 'none',

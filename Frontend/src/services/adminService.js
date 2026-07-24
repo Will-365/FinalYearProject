@@ -26,6 +26,12 @@ export const adminCollectorService = {
     api.patch(`/admin/collectors/${id}/status`, { collectorStatus }).then(unwrap),
 };
 
+export const adminResidentService = {
+  getAll: (params = {}) => api.get('/admin/residents', { params }).then(unwrap),
+  getById: (id) => api.get(`/admin/residents/${id}`).then(unwrap),
+  remove: (id) => api.delete(`/admin/residents/${id}`).then(unwrap),
+};
+
 export const adminCollectionService = {
   getAll: (params = {}) => api.get('/admin/collections', { params }).then(unwrap),
   getSummary: () => api.get('/admin/collections/summary').then(unwrap),

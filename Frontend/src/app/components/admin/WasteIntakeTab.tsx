@@ -15,7 +15,6 @@ import { formatKg, wasteBadgeClass } from '@/utils/adminHelpers';
 import { rwandaLocations } from '@/app/data/rwandaLocations';
 import { Scale, Plus, Package, CheckCircle2, ArrowUpRight, TrendingUp, Layers, AlertTriangle, ShieldCheck, MapPin, Loader2 } from 'lucide-react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TurningWeatherWidget } from '@/components/pipeline/TurningWeatherWidget';
 
 const PERIODS = [
   { id: '7d', label: '7 days' },
@@ -318,8 +317,6 @@ export function WasteIntakeTab() {
           </SelectContent>
         </Select>
       </div>
-
-      <TurningWeatherWidget defaultDistrict={district || 'Gasabo'} compact />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loadingAnalytics ? [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-[20px]" />) : (
